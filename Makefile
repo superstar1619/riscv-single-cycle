@@ -13,8 +13,10 @@ IMEM_DEPTH ?= 64
 INSTRUCTION_INIT_FILE ?= programs/riscvtest.memfile
 IFU_TARGET_DIR ?= generated/ifu
 RESET_VECTOR ?= 0
+LSU_TARGET_DIR ?= generated/lsu
+DMEM_DEPTH ?= 64
 
-.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom generate-ifu test clean
+.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom generate-ifu generate-lsu test clean
 
 generate:
 	$(SBT) "runMain riscvsingle.GenerateExtend $(WIDTH) $(TARGET_DIR)"
@@ -42,6 +44,9 @@ generate-irom:
 
 generate-ifu:
 	$(SBT) "runMain riscvsingle.GenerateIFU $(IMEM_DEPTH) $(IFU_TARGET_DIR) $(INSTRUCTION_INIT_FILE) $(RESET_VECTOR)"
+
+generate-lsu:
+	$(SBT) "runMain riscvsingle.GenerateLSU $(DMEM_DEPTH) $(LSU_TARGET_DIR)"
 
 test:
 	$(SBT) test
