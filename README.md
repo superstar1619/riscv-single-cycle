@@ -4,16 +4,17 @@
 
 ## 当前交付
 
-第 1 个模块 **Extend（立即数扩展）** 已核验并提交，提交号为 `d6cf8cc`。第 2 个模块 **Cmp（相等比较器）** 已实现，等待核验。CPU 的 `XLEN` 仍限定为 32。
+**Extend（立即数扩展）** 和 **Cmp（相等比较器）** 已核验并提交，提交号分别为 `d6cf8cc`、`4b96fd7`。第 3 个模块 **ALU（算术逻辑单元）** 已实现，等待核验。CPU 的 `XLEN` 仍限定为 32。
 
 | 模块 | 报告 | 源码 | 测试 | 生成的 Verilog |
 | --- | --- | --- | --- | --- |
 | Extend | [01-extend.md](docs/modules/01-extend.md) | [Extend.scala](src/main/scala/riscvsingle/ieu/Extend.scala) | [ExtendSpec.scala](src/test/scala/riscvsingle/ieu/ExtendSpec.scala) | [32 位](generated/extend/Extend.v)、[64 位输出](generated/extend64/Extend.v) |
 | Cmp | [02-cmp.md](docs/modules/02-cmp.md) | [Cmp.scala](src/main/scala/riscvsingle/ieu/Cmp.scala) | [CmpSpec.scala](src/test/scala/riscvsingle/ieu/CmpSpec.scala) | [32 位](generated/cmp/Cmp.v)、[64 位](generated/cmp64/Cmp.v) |
+| ALU | [03-alu.md](docs/modules/03-alu.md) | [ALU.scala](src/main/scala/riscvsingle/ieu/ALU.scala) | [ALUSpec.scala](src/test/scala/riscvsingle/ieu/ALUSpec.scala) | [32 位](generated/alu/ALU.v)、[64 位](generated/alu64/ALU.v) |
 
-[统一配置](src/main/scala/riscvsingle/config/CpuConfig.scala) 提供 CPU 结构参数；两个模块均可单独配置相应数据位宽。
+[统一配置](src/main/scala/riscvsingle/config/CpuConfig.scala) 提供 CPU 结构参数；三个模块均可单独配置相应数据位宽。
 
-**当前停在 Cmp 核验阶段；收到明确核验通过并允许继续的回复后，才实施 ALU。**
+**当前停在 ALU 核验阶段；收到明确核验通过并允许继续的回复后，才实施 RegFile。**
 
 ## 构建与验证
 
@@ -27,6 +28,8 @@ make generate
 make generate WIDTH=64 TARGET_DIR=generated/extend64
 make generate-cmp
 make generate-cmp WIDTH=64 CMP_TARGET_DIR=generated/cmp64
+make generate-alu
+make generate-alu WIDTH=64 ALU_TARGET_DIR=generated/alu64
 ```
 
 当前工作区的工具链位于 `../../.tools/chisel`，尚未加入 PATH，可使用：
@@ -37,11 +40,13 @@ make generate SBT=./scripts/sbt-local.sh
 make generate SBT=./scripts/sbt-local.sh WIDTH=64 TARGET_DIR=generated/extend64
 make generate-cmp SBT=./scripts/sbt-local.sh
 make generate-cmp SBT=./scripts/sbt-local.sh WIDTH=64 CMP_TARGET_DIR=generated/cmp64
+make generate-alu SBT=./scripts/sbt-local.sh
+make generate-alu SBT=./scripts/sbt-local.sh WIDTH=64 ALU_TARGET_DIR=generated/alu64
 ```
 
 `scripts/sbt-local.sh` 读取共享 JDK 和 sbt，将共享依赖缓存复制到本项目 `.cache/chisel` 后使用，避免修改共享工具目录。可以通过 `CHISEL_TOOLCHAIN_DIR` 和 `CHISEL_CACHE_DIR` 指定绝对路径。脚本关闭 sbt 构建服务器，并允许在无法创建启动套接字时继续批处理。
 
-`sbt run` 默认生成 Extend。也可以指定生成入口，例如 `sbt "runMain riscvsingle.GenerateExtend 64 generated/extend64"` 或 `sbt "runMain riscvsingle.GenerateCmp"`。`make clean` 调用 `sbt clean`，保留已生成的 Verilog 和模块报告。
+`sbt run` 默认生成 Extend。也可以使用 `runMain` 指定 `riscvsingle.GenerateExtend`、`riscvsingle.GenerateCmp` 或 `riscvsingle.GenerateALU`；例如 `sbt "runMain riscvsingle.GenerateALU 64 generated/alu64"`。`make clean` 调用 `sbt clean`，保留已生成的 Verilog 和模块报告。
 
 ## 配置与目录
 
