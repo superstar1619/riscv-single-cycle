@@ -1,4 +1,5 @@
 SBT ?= sbt
+VERILATOR ?= verilator
 WIDTH ?= 32
 TARGET_DIR ?= generated/extend
 CMP_TARGET_DIR ?= generated/cmp
@@ -17,7 +18,7 @@ LSU_TARGET_DIR ?= generated/lsu
 DMEM_DEPTH ?= 64
 CPU_TARGET_DIR ?= generated/riscv-single
 
-.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom generate-ifu generate-lsu generate-cpu test clean
+.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom generate-ifu generate-lsu generate-cpu test test-rtl clean
 
 generate:
 	$(SBT) "runMain riscvsingle.GenerateExtend $(WIDTH) $(TARGET_DIR)"
@@ -54,6 +55,9 @@ generate-cpu:
 
 test:
 	$(SBT) test
+
+test-rtl:
+	VERILATOR="$(VERILATOR)" ./scripts/test-rtl.sh
 
 clean:
 	$(SBT) clean

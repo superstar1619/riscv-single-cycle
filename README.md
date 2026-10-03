@@ -4,7 +4,7 @@
 
 ## 当前交付
 
-**Extend**、**Cmp**、**ALU**、**RegFile**、**Controller**、**Datapath**、**IEU**、**IROM**、**IFU**、**LSU** 已核验并提交，提交号分别为 `d6cf8cc`、`4b96fd7`、`aa69b21`、`24f885f`、`668d141`、`b77a5cd`、`da62b51`、`58232c4`、`1c1cb34`、`b882f2d`。第 11 个模块 **RiscvSingle（CPU 顶层）** 已实现，等待核验。CPU 的 `XLEN` 仍限定为 32。
+**Extend**、**Cmp**、**ALU**、**RegFile**、**Controller**、**Datapath**、**IEU**、**IROM**、**IFU**、**LSU** 已核验并提交，提交号分别为 `d6cf8cc`、`4b96fd7`、`aa69b21`、`24f885f`、`668d141`、`b77a5cd`、`da62b51`、`58232c4`、`1c1cb34`、`b882f2d`。第 11 个模块 **RiscvSingle（CPU 顶层）** 已按用户指示提交，提交号为 `d218f06`。CPU 的 `XLEN` 仍限定为 32。
 
 | 模块 | 报告 | 源码 | 测试 | 生成的 Verilog |
 | --- | --- | --- | --- | --- |
@@ -32,7 +32,7 @@ LSU 以 `dmemDepth` 配置 32 位数据字数量，组合读取、在 MemWrite=1
 
 RiscvSingle 接入同一 `CpuConfig` 并连接 IFU、IEU、LSU，保留书中的 clk/reset 输入及 WriteData/IEUAdr/MemWrite 输出。生产顶层已执行书中程序，确认地址 96 写入 7、地址 100 写入 25。全项目 12 个套件、74 项测试通过。
 
-**预定的 11 个硬件模块均已实现，当前停在 RiscvSingle 核验阶段；顶层及配套资料尚未提交，等待用户核验。**
+**预定的 11 个硬件模块均已实现并提交。** 后续补充的生成 RTL 整机验证已通过：Verilator 直接编译默认及 128 项配置，各使用三个随机初值种子，共六次运行通过。检查逐周期地址、存储事务、结束循环与同步复位；详见 [RTL 整机验证报告](docs/12-rtl-validation.md)。验证脚本、测试与报告已按用户指示纳入交付提交。
 
 ## 构建与验证
 
@@ -42,6 +42,7 @@ RiscvSingle 接入同一 `CpuConfig` 并连接 IFU、IEU、LSU，保留书中的
 
 ```bash
 make test
+make test-rtl
 make generate
 make generate WIDTH=64 TARGET_DIR=generated/extend64
 make generate-cmp
@@ -67,6 +68,7 @@ make generate-cpu IMEM_DEPTH=128 DMEM_DEPTH=128 CPU_TARGET_DIR=generated/riscv-s
 
 ```bash
 make test SBT=./scripts/sbt-local.sh
+make test-rtl
 make generate SBT=./scripts/sbt-local.sh
 make generate SBT=./scripts/sbt-local.sh WIDTH=64 TARGET_DIR=generated/extend64
 make generate-cmp SBT=./scripts/sbt-local.sh
@@ -101,6 +103,8 @@ LSU 使用 `sbt "runMain riscvsingle.GenerateLSU 64 generated/lsu"`。两个可�
 完整 CPU 使用 `sbt "runMain riscvsingle.GenerateRiscvSingle 64 64 generated/riscv-single programs/riscvtest.memfile 0"`。五个可选参数依次为指令深度、数据深度、输出目录、初始化文件、复位字节地址，分别对应 Makefile 的 `IMEM_DEPTH`、`DMEM_DEPTH`、`CPU_TARGET_DIR`、`INSTRUCTION_INIT_FILE`、`RESET_VECTOR`。文件参数 `-` 表示不初始化指令内容；复位地址支持十进制和 `0x`/`0X` 十六进制。默认生成加载书中程序镜像。
 
 128 项 CPU 示例使用完整的 [配置测试镜像](programs/rv32-configtest.memfile)，从 0x100 执行测试程序，验证 RAM 字 127 与字 63 独立、负偏移加载、jal 跳转与链接值。单独验证整机可执行 `./scripts/sbt-local.sh 'testOnly riscvsingle.RiscvSingleSpec'`。当前支持书中的简化 RV32 子集，尚无完整 RV32I 合法性检查、异常、CSR 或外部总线接口；程序文件加载仍属于仿真初始化，FPGA/ASIC 程序固化尚未实现。
+
+`make test-rtl` 使用 Verilator 和 C++17 编译器直接验证两份现有完整 CPU Verilog，测试仅通过五个生产顶层端口进行。可用 `make test-rtl VERILATOR=/path/to/verilator` 指定工具。脚本自动切换到项目根目录以加载镜像，将编译产物及日志放入 `target/rtl-test/{book,expanded}`，ccache 写入 `.cache/ccache`。修改 Chisel 后先执行上述两个 `generate-cpu` 命令，更新两份 RTL，再运行 `test-rtl`；该目标本身不重新生成硬件。
 
 ## 配置与目录
 
