@@ -4,7 +4,7 @@
 
 ## 当前交付
 
-**Extend**、**Cmp**、**ALU** 已核验并提交，提交号分别为 `d6cf8cc`、`4b96fd7`、`aa69b21`。第 4 个模块 **RegFile（寄存器堆）** 已实现，等待核验。CPU 的 `XLEN` 仍限定为 32。
+**Extend**、**Cmp**、**ALU**、**RegFile** 已核验并提交，提交号分别为 `d6cf8cc`、`4b96fd7`、`aa69b21`、`24f885f`。第 5 个模块 **Controller（控制器）** 已实现，等待核验。CPU 的 `XLEN` 仍限定为 32。
 
 | 模块 | 报告 | 源码 | 测试 | 生成的 Verilog |
 | --- | --- | --- | --- | --- |
@@ -12,12 +12,13 @@
 | Cmp | [02-cmp.md](docs/modules/02-cmp.md) | [Cmp.scala](src/main/scala/riscvsingle/ieu/Cmp.scala) | [CmpSpec.scala](src/test/scala/riscvsingle/ieu/CmpSpec.scala) | [32 位](generated/cmp/Cmp.v)、[64 位](generated/cmp64/Cmp.v) |
 | ALU | [03-alu.md](docs/modules/03-alu.md) | [ALU.scala](src/main/scala/riscvsingle/ieu/ALU.scala) | [ALUSpec.scala](src/test/scala/riscvsingle/ieu/ALUSpec.scala) | [32 位](generated/alu/ALU.v)、[64 位](generated/alu64/ALU.v) |
 | RegFile | [04-regfile.md](docs/modules/04-regfile.md) | [RegFile.scala](src/main/scala/riscvsingle/ieu/RegFile.scala) | [RegFileSpec.scala](src/test/scala/riscvsingle/ieu/RegFileSpec.scala) | [32 位](generated/regfile/RegFile.v)、[64 位](generated/regfile64/RegFile.v) |
+| Controller | [05-controller.md](docs/modules/05-controller.md) | [Controller.scala](src/main/scala/riscvsingle/ieu/Controller.scala) | [ControllerSpec.scala](src/test/scala/riscvsingle/ieu/ControllerSpec.scala) | [Controller.v](generated/controller/Controller.v) |
 
-[统一配置](src/main/scala/riscvsingle/config/CpuConfig.scala) 提供 CPU 结构参数；已交付模块均可单独配置相应数据位宽，RegFile 还可配置寄存器数量。
+[统一配置](src/main/scala/riscvsingle/config/CpuConfig.scala) 提供 CPU 结构参数。Extend、Cmp、ALU、RegFile 可单独配置数据位宽，RegFile 还可配置寄存器数量；Controller 的端口位宽遵循固定的 RISC-V 指令字段和控制编码。
 
 RegFile 默认使用完整的 32 项 `Reg(Vec(...))`，下标直接对应寄存器编号。高有效同步 `reset` 仅将 `rf(0)` 清零，其他寄存器保持；正常写入跳过 0 号寄存器。读写编号均不减一。
 
-**当前停在 RegFile 核验阶段；收到明确核验通过并允许继续的回复后，才实施 Controller。**
+**当前停在 Controller 核验阶段；收到明确核验通过并允许继续的回复后，才实施 Datapath。**
 
 ## 构建与验证
 
@@ -35,6 +36,7 @@ make generate-alu
 make generate-alu WIDTH=64 ALU_TARGET_DIR=generated/alu64
 make generate-regfile
 make generate-regfile WIDTH=64 REGFILE_TARGET_DIR=generated/regfile64
+make generate-controller
 ```
 
 当前工作区的工具链位于 `../../.tools/chisel`，尚未加入 PATH，可使用：
@@ -49,11 +51,12 @@ make generate-alu SBT=./scripts/sbt-local.sh
 make generate-alu SBT=./scripts/sbt-local.sh WIDTH=64 ALU_TARGET_DIR=generated/alu64
 make generate-regfile SBT=./scripts/sbt-local.sh
 make generate-regfile SBT=./scripts/sbt-local.sh WIDTH=64 REGFILE_TARGET_DIR=generated/regfile64
+make generate-controller SBT=./scripts/sbt-local.sh
 ```
 
 `scripts/sbt-local.sh` 读取共享 JDK 和 sbt，将共享依赖缓存复制到本项目 `.cache/chisel` 后使用，避免修改共享工具目录。可以通过 `CHISEL_TOOLCHAIN_DIR` 和 `CHISEL_CACHE_DIR` 指定绝对路径。脚本关闭 sbt 构建服务器，并允许在无法创建启动套接字时继续批处理。
 
-`sbt run` 默认生成 Extend。也可以使用 `runMain` 指定 `riscvsingle.GenerateExtend`、`riscvsingle.GenerateCmp`、`riscvsingle.GenerateALU` 或 `riscvsingle.GenerateRegFile`；例如 `sbt "runMain riscvsingle.GenerateRegFile 64 generated/regfile64 32"`。RegFile 的第三个可选参数为寄存器数量，Makefile 对应 `REGISTER_COUNT`，默认 32。`make clean` 调用 `sbt clean`，保留已生成的 Verilog 和模块报告。
+`sbt run` 默认生成 Extend。也可以使用 `runMain` 指定 `riscvsingle.GenerateExtend`、`riscvsingle.GenerateCmp`、`riscvsingle.GenerateALU`、`riscvsingle.GenerateRegFile` 或 `riscvsingle.GenerateController`。例如 `sbt "runMain riscvsingle.GenerateRegFile 64 generated/regfile64 32"`；RegFile 的第三个可选参数为寄存器数量，Makefile 对应 `REGISTER_COUNT`，默认 32。Controller 仅接受一个可选的输出目录参数，如 `sbt "runMain riscvsingle.GenerateController generated/controller"`。`make clean` 调用 `sbt clean`，保留已生成的 Verilog 和模块报告。
 
 ## 配置与目录
 
