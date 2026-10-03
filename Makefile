@@ -6,8 +6,9 @@ ALU_TARGET_DIR ?= generated/alu
 REGFILE_TARGET_DIR ?= generated/regfile
 REGISTER_COUNT ?= 32
 CONTROLLER_TARGET_DIR ?= generated/controller
+DATAPATH_TARGET_DIR ?= generated/datapath
 
-.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller test clean
+.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath test clean
 
 generate:
 	$(SBT) "runMain riscvsingle.GenerateExtend $(WIDTH) $(TARGET_DIR)"
@@ -23,6 +24,9 @@ generate-regfile:
 
 generate-controller:
 	$(SBT) "runMain riscvsingle.GenerateController $(CONTROLLER_TARGET_DIR)"
+
+generate-datapath:
+	$(SBT) "runMain riscvsingle.GenerateDatapath $(DATAPATH_TARGET_DIR)"
 
 test:
 	$(SBT) test
