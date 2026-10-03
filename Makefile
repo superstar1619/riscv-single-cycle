@@ -8,8 +8,11 @@ REGISTER_COUNT ?= 32
 CONTROLLER_TARGET_DIR ?= generated/controller
 DATAPATH_TARGET_DIR ?= generated/datapath
 IEU_TARGET_DIR ?= generated/ieu
+IROM_TARGET_DIR ?= generated/irom
+IMEM_DEPTH ?= 64
+INSTRUCTION_INIT_FILE ?= programs/riscvtest.memfile
 
-.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath generate-ieu test clean
+.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom test clean
 
 generate:
 	$(SBT) "runMain riscvsingle.GenerateExtend $(WIDTH) $(TARGET_DIR)"
@@ -31,6 +34,9 @@ generate-datapath:
 
 generate-ieu:
 	$(SBT) "runMain riscvsingle.GenerateIEU $(IEU_TARGET_DIR)"
+
+generate-irom:
+	$(SBT) "runMain riscvsingle.GenerateIROM $(IMEM_DEPTH) $(IROM_TARGET_DIR) $(INSTRUCTION_INIT_FILE)"
 
 test:
 	$(SBT) test
