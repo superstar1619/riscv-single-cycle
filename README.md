@@ -4,7 +4,7 @@
 
 ## 当前交付
 
-**Extend**、**Cmp**、**ALU**、**RegFile**、**Controller**、**Datapath**、**IEU** 已核验并提交，提交号分别为 `d6cf8cc`、`4b96fd7`、`aa69b21`、`24f885f`、`668d141`、`b77a5cd`、`da62b51`。第 8 个模块 **IROM（指令只读存储器）** 已实现，等待核验。CPU 的 `XLEN` 仍限定为 32。
+**Extend**、**Cmp**、**ALU**、**RegFile**、**Controller**、**Datapath**、**IEU**、**IROM** 已核验并提交，提交号分别为 `d6cf8cc`、`4b96fd7`、`aa69b21`、`24f885f`、`668d141`、`b77a5cd`、`da62b51`、`58232c4`。第 9 个模块 **IFU（取指单元）** 已实现，等待核验。CPU 的 `XLEN` 仍限定为 32。
 
 | 模块 | 报告 | 源码 | 测试 | 生成的 Verilog |
 | --- | --- | --- | --- | --- |
@@ -16,6 +16,7 @@
 | Datapath | [06-datapath.md](docs/modules/06-datapath.md) | [Datapath.scala](src/main/scala/riscvsingle/ieu/Datapath.scala) | [DatapathSpec.scala](src/test/scala/riscvsingle/ieu/DatapathSpec.scala) | [Datapath.v](generated/datapath/Datapath.v) |
 | IEU | [07-ieu.md](docs/modules/07-ieu.md) | [IEU.scala](src/main/scala/riscvsingle/ieu/IEU.scala) | [IEUSpec.scala](src/test/scala/riscvsingle/ieu/IEUSpec.scala) | [IEU.v](generated/ieu/IEU.v) |
 | IROM | [08-irom.md](docs/modules/08-irom.md) | [IROM.scala](src/main/scala/riscvsingle/ifu/IROM.scala) | [IROMSpec.scala](src/test/scala/riscvsingle/ifu/IROMSpec.scala) | [64 项](generated/irom/IROM.v)、[128 项](generated/irom128/IROM.v) |
+| IFU | [09-ifu.md](docs/modules/09-ifu.md) | [IFU.scala](src/main/scala/riscvsingle/ifu/IFU.scala) | [IFUSpec.scala](src/test/scala/riscvsingle/ifu/IFUSpec.scala) | [默认](generated/ifu/IFU.v)、[128 项、复位地址 0x100](generated/ifu128/IFU.v) |
 
 [统一配置](src/main/scala/riscvsingle/config/CpuConfig.scala) 提供 CPU 结构参数。Extend、Cmp、ALU、RegFile 可单独配置数据位宽，RegFile 还可配置寄存器数量；Controller 的端口位宽遵循固定的 RISC-V 指令字段和控制编码。Datapath、IEU 接受 `CpuConfig`，将 `xlen` 传递给端口与子模块，当前限定为 RV32 和 32 项寄存器。
 
@@ -23,7 +24,9 @@ RegFile 默认使用完整的 32 项 `Reg(Vec(...))`，下标直接对应寄存�
 
 IROM 接受同一配置，以 `imemDepth` 设置 32 位指令字数量，以 `instructionInitFile` 设置十六进制初始化文件。默认 `CpuConfig()` 不初始化 ROM；生成入口默认加载 [书中程序镜像](programs/riscvtest.memfile)，包含 21 条程序指令和 43 条填充 NOP。当前生成的 `$readmemh` 位于仿真初始化块中，FPGA 初始化需在后续实现流程中另行接入。
 
-**当前停在 IROM 核验阶段；收到明确核验通过并允许继续的回复后，才实施 IFU。**
+IFU 接受统一配置，用 `resetVector` 设置 PC 的复位字节地址，并将配置传给 IROM。项目统一使用高有效同步复位：reset=1 的时钟上升沿将 PC 加载为 resetVector，并将 RegFile 的 x0 清零；reset 电平变化本身不更新寄存器。正常时钟上升沿选择 PCPlus4 或 IEUAdr 更新 PC。
+
+**当前停在 IFU 核验阶段；收到明确核验通过并允许继续的回复后，才实施 LSU。**
 
 ## 构建与验证
 
@@ -46,6 +49,8 @@ make generate-datapath
 make generate-ieu
 make generate-irom
 make generate-irom IMEM_DEPTH=128 IROM_TARGET_DIR=generated/irom128
+make generate-ifu
+make generate-ifu IMEM_DEPTH=128 IFU_TARGET_DIR=generated/ifu128 RESET_VECTOR=0x100
 ```
 
 当前工作区的工具链位于 `../../.tools/chisel`，尚未加入 PATH，可使用：
@@ -65,6 +70,8 @@ make generate-datapath SBT=./scripts/sbt-local.sh
 make generate-ieu SBT=./scripts/sbt-local.sh
 make generate-irom SBT=./scripts/sbt-local.sh
 make generate-irom SBT=./scripts/sbt-local.sh IMEM_DEPTH=128 IROM_TARGET_DIR=generated/irom128
+make generate-ifu SBT=./scripts/sbt-local.sh
+make generate-ifu SBT=./scripts/sbt-local.sh IMEM_DEPTH=128 IFU_TARGET_DIR=generated/ifu128 RESET_VECTOR=0x100
 ```
 
 `scripts/sbt-local.sh` 读取共享 JDK 和 sbt，将共享依赖缓存复制到本项目 `.cache/chisel` 后使用，避免修改共享工具目录。可以通过 `CHISEL_TOOLCHAIN_DIR` 和 `CHISEL_CACHE_DIR` 指定绝对路径。脚本关闭 sbt 构建服务器，并允许在无法创建启动套接字时继续批处理。
@@ -73,9 +80,11 @@ make generate-irom SBT=./scripts/sbt-local.sh IMEM_DEPTH=128 IROM_TARGET_DIR=gen
 
 IROM 使用 `sbt "runMain riscvsingle.GenerateIROM 64 generated/irom programs/riscvtest.memfile"`。三个可选参数依次为深度、输出目录、初始化文件，Makefile 分别对应 `IMEM_DEPTH`、`IROM_TARGET_DIR`、`INSTRUCTION_INIT_FILE`；将文件设为 `-` 表示不初始化。相对文件路径以仿真运行目录为基准；在项目根目录运行可直接使用默认镜像。默认镜像为 64 项，128 项生成示例的后 64 项未初始化；如需读取全部条目，提供与深度匹配的镜像。
 
+IFU 使用 `sbt "runMain riscvsingle.GenerateIFU 64 generated/ifu programs/riscvtest.memfile 0"`。四个可选参数依次为深度、输出目录、初始化文件、复位字节地址，Makefile 对应 `IMEM_DEPTH`、`IFU_TARGET_DIR`、`INSTRUCTION_INIT_FILE`、`RESET_VECTOR`。复位地址支持十进制和 `0x`/`0X` 十六进制。128 项、复位地址 0x100 的生成示例用于展示配置；默认镜像在该地址没有初始化指令，运行时需提供覆盖该地址的镜像。
+
 ## 配置与目录
 
-`CpuConfig` 默认值为 `xlen=32`、`imemDepth=64`、`dmemDepth=64`、`resetVector=0`、`instructionInitFile=None`。存储深度以 32 位字计，复位地址以字节计。配置类负责 elaboration 前的参数检查。IEU 将配置传给 Datapath，当前仅消费 `xlen`；IROM 消费 `imemDepth` 和 `instructionInitFile`，地址宽度采用 `xlen`；数据存储深度、复位地址将在后续模块接入。
+`CpuConfig` 默认值为 `xlen=32`、`imemDepth=64`、`dmemDepth=64`、`resetVector=0`、`instructionInitFile=None`。存储深度以 32 位字计，复位地址以字节计。配置类负责 elaboration 前的参数检查。IEU 将配置传给 Datapath，当前仅消费 `xlen`；IROM 消费 `imemDepth` 和 `instructionInitFile`，地址宽度采用 `xlen`；IFU 使用 `xlen`、`resetVector` 并将配置传给 IROM；数据存储深度将在 LSU 中接入。
 
 `src/main/scala/riscvsingle/ieu` 放置执行单元相关模块，`ifu` 放置取指相关模块，`config` 放置共享配置，`src/test/scala` 放置测试，`docs/modules` 放置每轮核验报告，`generated` 放置实际生成的硬件文件，`programs` 放置指令初始化镜像。
 
