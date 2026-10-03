@@ -7,8 +7,9 @@ REGFILE_TARGET_DIR ?= generated/regfile
 REGISTER_COUNT ?= 32
 CONTROLLER_TARGET_DIR ?= generated/controller
 DATAPATH_TARGET_DIR ?= generated/datapath
+IEU_TARGET_DIR ?= generated/ieu
 
-.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath test clean
+.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath generate-ieu test clean
 
 generate:
 	$(SBT) "runMain riscvsingle.GenerateExtend $(WIDTH) $(TARGET_DIR)"
@@ -27,6 +28,9 @@ generate-controller:
 
 generate-datapath:
 	$(SBT) "runMain riscvsingle.GenerateDatapath $(DATAPATH_TARGET_DIR)"
+
+generate-ieu:
+	$(SBT) "runMain riscvsingle.GenerateIEU $(IEU_TARGET_DIR)"
 
 test:
 	$(SBT) test
