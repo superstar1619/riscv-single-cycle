@@ -1,11 +1,14 @@
-# Generate Verilog code
-doit:
-	sbt run
+SBT ?= sbt
+WIDTH ?= 32
+TARGET_DIR ?= generated/extend
 
-# Run the test
+.PHONY: generate test clean
+
+generate:
+	$(SBT) "runMain riscvsingle.GenerateExtend $(WIDTH) $(TARGET_DIR)"
+
 test:
-	sbt test
+	$(SBT) test
 
 clean:
-	git clean -fd
-
+	$(SBT) clean

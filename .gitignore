@@ -1,0 +1,9 @@
+target/
+project/target/
+project/project/
+test_run_dir/
+.cache/
+.bsp/
+.metals/
+generated/**/*.fir
+generated/**/*.anno.json
