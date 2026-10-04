@@ -3,7 +3,7 @@ package riscvsingle.ifu
 import chisel3._
 import riscvsingle.config.CpuConfig
 
-/** Next-PC selection inputs and current instruction/address outputs. */
+/** 下一 PC 选择与当前指令/地址；目标地址由 IEU 处理。 */
 final class IFUIO(config: CpuConfig) extends Bundle {
   val PCSrc = Input(Bool())
   val IEUAdr = Input(UInt(config.xlen.W))
@@ -12,10 +12,10 @@ final class IFUIO(config: CpuConfig) extends Bundle {
   val PCPlus4 = Output(UInt(config.xlen.W))
 }
 
-/** Instruction fetch unit, Code Example 2.15, pp. 61-62.
-  * Per review, PC has active-high synchronous reset. A rising clock edge
-  * with reset asserted loads the configurable resetVector.
-  * Instruction reads remain asynchronous through the reviewed IROM.
+/** 教材 §7.1.5 的单周期取指单元，参考 CVW ifu.sv 的 PC 选择和递增结构。
+  * 高有效同步 reset 在上升沿加载 resetVector；正常时选 PC+4 或 IEUAdr。
+  * IROM 组合输出当前指令；不移植停顿、预测或流水线寄存器。
+  * JALR 清位属于 IEU，IFU 原样接收目标地址，不重复清除低位。
   */
 final class IFU(val config: CpuConfig = CpuConfig()) extends RawModule {
   val clk = IO(Input(Clock()))

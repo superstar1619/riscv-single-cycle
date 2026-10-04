@@ -4,7 +4,7 @@
 
 ## 当前交付
 
-**第七章第 14 轮：IROM 核验完成。** 保留教材组合取指与容量回绕，补充完整扩容镜像边界和复位保持测试；模块 8/8、全工程 181/181 通过。见 [IROM 第七章报告](docs/modules/18-irom-chapter7.md)。按最新指令连续完成 IFU、RiscvSingle，每轮测试通过后提交，全部模块结束后统一生成并核对波形。
+**第七章第 15 轮：IFU 核验完成。** PC 模型覆盖三种容量/复位配置共900周期；模块9/9、全工程184/184通过。见 [IFU 第七章报告](docs/modules/19-ifu-chapter7.md)。IROM已提交为 `5cbc622`；继续完成CPU观察接口、复位写入屏蔽与完整RV32验收，最后统一生成/核对波形。
 
 第 11–13 轮 SubwordRead、DTIM、LSU 已补提交为 `f826665`。RV32 子字数据路径已连接，最终整机验收与复位写入屏蔽正在后续轮完成。
 
@@ -47,7 +47,7 @@
 | Datapath | [06-datapath.md](docs/modules/06-datapath.md) | [Datapath.scala](src/main/scala/riscvsingle/ieu/Datapath.scala) | [DatapathSpec.scala](src/test/scala/riscvsingle/ieu/DatapathSpec.scala) | [Datapath.v](generated/datapath/Datapath.v) |
 | IEU | [07-ieu.md](docs/modules/07-ieu.md) | [IEU.scala](src/main/scala/riscvsingle/ieu/IEU.scala) | [IEUSpec.scala](src/test/scala/riscvsingle/ieu/IEUSpec.scala) | [IEU.v](generated/ieu/IEU.v) |
 | IROM | [第七章](docs/modules/18-irom-chapter7.md)、[第二章历史](docs/modules/08-irom.md) | [IROM.scala](src/main/scala/riscvsingle/ifu/IROM.scala) | [IROMSpec.scala](src/test/scala/riscvsingle/ifu/IROMSpec.scala) | [64 项](generated/irom/IROM.v)、[128 项](generated/irom128/IROM.v) |
-| IFU | [09-ifu.md](docs/modules/09-ifu.md) | [IFU.scala](src/main/scala/riscvsingle/ifu/IFU.scala) | [IFUSpec.scala](src/test/scala/riscvsingle/ifu/IFUSpec.scala) | [默认](generated/ifu/IFU.v)、[128 项、复位地址 0x100](generated/ifu128/IFU.v) |
+| IFU | [第七章](docs/modules/19-ifu-chapter7.md)、[第二章历史](docs/modules/09-ifu.md) | [IFU.scala](src/main/scala/riscvsingle/ifu/IFU.scala) | [IFUSpec.scala](src/test/scala/riscvsingle/ifu/IFUSpec.scala) | [默认](generated/ifu/IFU.v)、[128 项、复位地址 0x100](generated/ifu128/IFU.v) |
 | LSU | [第七章](docs/modules/17-lsu-chapter7.md)、[第二章历史](docs/modules/10-lsu.md) | [LSU.scala](src/main/scala/riscvsingle/lsu/LSU.scala) | [字访存](src/test/scala/riscvsingle/lsu/LSUSpec.scala)、[子字访存](src/test/scala/riscvsingle/lsu/LSUSubwordSpec.scala) | [64 项](generated/lsu/LSU.v)、[128 项](generated/lsu128/LSU.v) |
 | RiscvSingle | [11-riscv-single.md](docs/modules/11-riscv-single.md) | [RiscvSingle.scala](src/main/scala/riscvsingle/RiscvSingle.scala) | [RiscvSingleSpec.scala](src/test/scala/riscvsingle/RiscvSingleSpec.scala) | [默认 CPU](generated/riscv-single/RiscvSingle.v)、[128 项、复位地址 0x100](generated/riscv-single128/RiscvSingle.v) |
 

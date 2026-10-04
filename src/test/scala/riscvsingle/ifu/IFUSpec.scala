@@ -8,6 +8,7 @@ import riscvsingle.config.CpuConfig
 import riscvsingle.ieu.IEU
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
+import scala.util.Random
 
 private class IFUHarness(config: CpuConfig) extends Module {
   val io = IO(new IFUIO(config))
@@ -200,5 +201,44 @@ class IFUSpec extends AnyFlatSpec with ChiselScalatestTester {
     assert(events == Seq("posedge clk"), "PC state must update only on rising clock edges")
     assert(verilog.contains("pcreg <= 32'h100;"), "PC reset must use the configured vector")
     assert(verilog.contains("IROM irom ("), "IFU must contain the reviewed IROM")
+  }
+
+  for ((depth, vector) <- Seq(2 -> 0, 64 -> 0x100, 128 -> 0x100)) {
+    it should s"match a seeded PC model at depth $depth and reset vector $vector" in {
+      val directory = Files.createDirectories(Paths.get("target/ifu-test-images"))
+      val file = Files.createTempFile(directory, s"ifu-model-$depth-", ".hex")
+      val words = Seq.tabulate(depth)(index => BigInt(0x12000000L + index))
+      Files.write(file, words.map(_.toString(16)).mkString("", "\n", "\n")
+        .getBytes(StandardCharsets.UTF_8))
+      val config = CpuConfig(imemDepth = depth, resetVector = vector,
+        instructionInitFile = Some(file.toString))
+      test(new IFUHarness(config)) { dut =>
+        val random = new Random(0x715 + depth)
+        val mask = (BigInt(1) << 32) - 1
+        var pc = BigInt(vector)
+        dut.io.PCSrc.poke(false.B)
+        dut.io.IEUAdr.poke(0.U)
+        dut.reset.poke(true.B)
+        dut.clock.step() // 通过实际同步复位建立初始 PC。
+        for (cycle <- 0 until 300) {
+          val target = BigInt(32, random)
+          val jump = (cycle & 1) != 0
+          val reset = cycle % 17 == 0
+          dut.io.PCSrc.poke(jump.B)
+          dut.io.IEUAdr.poke(target.U)
+          dut.reset.poke(reset.B)
+          dut.io.PC.expect(pc.U) // 控制和 reset 改变本身不能更新 PC。
+          dut.io.PCPlus4.expect(((pc + 4) & mask).U)
+          dut.io.Instr.expect(words(((pc / 4) % depth).toInt).U)
+          dut.clock.step()
+          pc = if (reset) BigInt(vector) else if (jump) target else (pc + 4) & mask
+          dut.io.PC.expect(pc.U)
+          dut.io.PCPlus4.expect(((pc + 4) & mask).U)
+          dut.io.Instr.expect(words(((pc / 4) % depth).toInt).U)
+          dut.reset.poke(false.B)
+          dut.io.PC.expect(pc.U) // 释放复位同样不产生状态更新。
+        }
+      }
+    }
   }
 }
