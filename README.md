@@ -1,8 +1,12 @@
 # RISC-V 单周期 CPU（Chisel）
 
-依据本地《RISC-V System-on-Chip Design, Edition 1》Code Example 2.15（书中第 61–65 页）分模块实现。第一版采用书中的简化 RV32 指令子集，沿用 IFU、IEU、LSU 层次。
+依据本地《RISC-V System-on-Chip Design, Edition 1》分模块实现，沿用 IFU、IEU、LSU 层次。第二章 Code Example 2.15 的简化 RV32 单周期 CPU 已完成；当前按第七章 §7.1、图 7.2 和表 7.1 逐轮完善 RV32 整数指令支持。
 
 ## 当前交付
+
+**第七章第 1 轮：Extend。** `ImmSrc` 升级为 3 位，编码 `000/001/010/011/100` 对应 I/S/B/J/U，其他编码输出零；独立模块支持 32/64 位符号扩展。Datapath 将现有 2 位选择码补零后连接 Extend，整机继续执行原有简化指令子集，LUI/AUIPC 的译码和写回留待对应轮次。详细端口、内部信号、测试和 RTL 路径见 [Extend 核验报告](docs/modules/01-extend.md)。**本轮停止，等待用户核验；明确通过并允许继续后才进入 Cmp。**
+
+以下为第二章已核验交付记录；Extend 的当前接口以本轮报告和生成文件为准。
 
 **Extend**、**Cmp**、**ALU**、**RegFile**、**Controller**、**Datapath**、**IEU**、**IROM**、**IFU**、**LSU** 已核验并提交，提交号分别为 `d6cf8cc`、`4b96fd7`、`aa69b21`、`24f885f`、`668d141`、`b77a5cd`、`da62b51`、`58232c4`、`1c1cb34`、`b882f2d`。第 11 个模块 **RiscvSingle（CPU 顶层）** 已按用户指示提交，提交号为 `d218f06`。CPU 的 `XLEN` 仍限定为 32。
 
@@ -34,7 +38,7 @@ RiscvSingle 接入同一 `CpuConfig` 并连接 IFU、IEU、LSU，保留书中的
 
 **预定的 11 个硬件模块均已实现并提交。** 后续补充的生成 RTL 整机验证已通过：Verilator 直接编译默认及 128 项配置，各使用三个随机初值种子，共六次运行通过。检查逐周期地址、存储事务、结束循环与同步复位；详见 [RTL 整机验证报告](docs/12-rtl-validation.md)。验证脚本、测试与报告已提交为 `b983c22`。
 
-**项目已按用户指示完成收尾并结束。** 实现范围、模块交付、参数、用户核验要求、验证结果及复现方式见 [项目总结报告](docs/project-summary.md)。
+**第二章项目已完成收尾。** 当时的实现范围、模块交付、参数、用户核验要求、验证结果及复现方式见 [项目总结报告](docs/project-summary.md)；第七章的当前进度以本 README 和各模块更新报告为准。
 
 后续按用户要求补充 [Code Example 2.16 汇编程序](programs/riscvtest.s)和整机波形入口；其机器码与已有 `programs/riscvtest.memfile` 的前 21 项一致。运行 `make test-wave SBT=./scripts/sbt-local.sh` 可生成 `target/waveforms/code-example-2.16.vcd`，再用 `gtkwave target/waveforms/code-example-2.16.vcd waves/code-example-2.16.gtkw` 查看预选信号。详见 [程序与波形报告](docs/13-code-example-2.16.md)。
 
@@ -116,4 +120,4 @@ LSU 使用 `sbt "runMain riscvsingle.GenerateLSU 64 generated/lsu"`。两个可�
 
 `src/main/scala/riscvsingle/ieu` 放置执行单元相关模块，`ifu` 放置取指相关模块，`lsu` 放置访存相关模块，`config` 放置共享配置，`src/test/scala` 放置测试，`docs/modules` 放置每轮核验报告，`generated` 放置实际生成的硬件文件，`programs` 放置指令初始化镜像。
 
-实施顺序：`Extend → Cmp → ALU → RegFile → Controller → Datapath → IEU → IROM → IFU → LSU → RiscvSingle`。每轮仅完成一个硬件模块及其测试、报告，然后停止等待核验。
+第七章完善顺序：`Extend → Cmp → RegFile → Shifter → ALU → Controller → Datapath → IEU → SwByteMask → SubwordWrite → SubwordRead → DTIM → LSU → IROM → IFU → RiscvSingle`。每轮仅完善一个硬件模块；连接适配归入当前轮，完成测试、生成 RTL 和更新报告后停止等待核验，不自动提交或进入下一模块。

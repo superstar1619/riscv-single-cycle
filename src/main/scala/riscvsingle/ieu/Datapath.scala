@@ -1,6 +1,7 @@
 package riscvsingle.ieu
 
 import chisel3._
+import chisel3.util.Cat
 import riscvsingle.config.CpuConfig
 
 /** Control, instruction, and memory interfaces from Code Example 2.15. */
@@ -55,7 +56,8 @@ final class Datapath(val config: CpuConfig = CpuConfig()) extends RawModule {
   R2 := rf.io.RD2
 
   ext.io.Instr := io.Instr(31, 7)
-  ext.io.ImmSrc := io.ImmSrc
+  // This round preserves the existing four-format controller/datapath interface.
+  ext.io.ImmSrc := Cat(0.U(1.W), io.ImmSrc)
   ImmExt := ext.io.ImmExt
 
   cmp.io.R1 := R1
