@@ -166,6 +166,49 @@ class RegFileSpec extends AnyFlatSpec with ChiselScalatestTester {
     it should s"match a sequential reference model across 300 cycles at $dataWidth bits" in {
       test(new RegFileHarness(dataWidth, 32)) { dut => randomized(dut, dataWidth, 32, 300) }
     }
+
+    it should s"preserve every nonzero register across reset pulses and suppress every reset-time write at $dataWidth bits" in {
+      test(new RegFileHarness(dataWidth, 32)) { dut =>
+        val mask = (BigInt(1) << dataWidth) - 1
+        val highBit = BigInt(1) << (dataWidth - 1)
+        val model = Array.tabulate(32) { address =>
+          if (address == 0) BigInt(0) else highBit | (BigInt(address) * 0x101)
+        }
+        initialize(dut, model)
+        for (address <- 0 until 32) read(dut, model, address, address)
+
+        dut.io.WE3.poke(true.B)
+        dut.io.A3.poke(31.U)
+        dut.io.WD3.poke((mask ^ model(31)).U)
+        // No clock edge occurs during this entire high/low reset pulse.
+        dut.reset.poke(true.B)
+        for (address <- 0 until 32) read(dut, model, address, address)
+        dut.reset.poke(false.B)
+        for (address <- 0 until 32) read(dut, model, address, address)
+
+        dut.reset.poke(true.B)
+        for (writeAddress <- 0 until 32) {
+          dut.io.A3.poke(writeAddress.U)
+          dut.io.WD3.poke((mask ^ model(writeAddress)).U)
+          // Every candidate destination differs from its stored value;
+          // reset must preserve the entire bank even with writes enabled.
+          for (address <- 0 until 32) read(dut, model, address, address)
+          dut.clock.step()
+          for (address <- 0 until 32) read(dut, model, address, address)
+        }
+
+        dut.reset.poke(false.B)
+        val resumedValue = mask ^ model(31)
+        dut.io.A3.poke(31.U)
+        dut.io.WD3.poke(resumedValue.U)
+        read(dut, model, 31, 31)
+        dut.clock.step()
+        model(31) = resumedValue
+        read(dut, model, 31, 31)
+        dut.io.WE3.poke(false.B)
+        for (address <- 0 until 32) read(dut, model, address, address)
+      }
+    }
   }
 
   for ((dataWidth, registerCount) <- Seq((8, 16), (1, 2))) {
