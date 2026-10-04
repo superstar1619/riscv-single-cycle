@@ -4,6 +4,8 @@ WIDTH ?= 32
 TARGET_DIR ?= generated/extend
 CMP_TARGET_DIR ?= generated/cmp
 SHIFTER_TARGET_DIR ?= generated/shifter
+SWBYTEMASK_TARGET_DIR ?= generated/swbytemask
+SUBWORDWRITE_TARGET_DIR ?= generated/subwordwrite
 ALU_TARGET_DIR ?= generated/alu
 REGFILE_TARGET_DIR ?= generated/regfile
 REGISTER_COUNT ?= 32
@@ -20,7 +22,7 @@ DMEM_DEPTH ?= 64
 CPU_TARGET_DIR ?= generated/riscv-single
 WAVE_DIR ?= target/waveforms
 
-.PHONY: generate generate-cmp generate-shifter generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom generate-ifu generate-lsu generate-cpu test test-rtl test-wave clean
+.PHONY: generate generate-cmp generate-shifter generate-swbytemask generate-subwordwrite generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom generate-ifu generate-lsu generate-cpu test test-rtl test-wave test-subwordwrite-wave clean
 
 generate:
 	$(SBT) "runMain riscvsingle.GenerateExtend $(WIDTH) $(TARGET_DIR)"
@@ -30,6 +32,12 @@ generate-cmp:
 
 generate-shifter:
 	$(SBT) "runMain riscvsingle.GenerateShifter $(WIDTH) $(SHIFTER_TARGET_DIR)"
+
+generate-swbytemask:
+	$(SBT) "runMain riscvsingle.GenerateSwByteMask $(WIDTH) $(SWBYTEMASK_TARGET_DIR)"
+
+generate-subwordwrite:
+	$(SBT) "runMain riscvsingle.GenerateSubwordWrite $(WIDTH) $(SUBWORDWRITE_TARGET_DIR)"
 
 generate-alu:
 	$(SBT) "runMain riscvsingle.GenerateALU $(WIDTH) $(ALU_TARGET_DIR)"
@@ -71,3 +79,9 @@ test-wave:
 
 clean:
 	$(SBT) clean
+
+test-subwordwrite-wave:
+	$(SBT) 'testOnly riscvsingle.lsu.SubwordWriteSpec -- -z "generate a waveform"'
+	mkdir -p "$(WAVE_DIR)"
+	cp test_run_dir/SubwordWrite_should_demonstrate_fixed_store_copies_and_generate_a_waveform_at_32_bits/SubwordWriteHarness.vcd "$(WAVE_DIR)/subwordwrite32.vcd"
+	cp test_run_dir/SubwordWrite_should_demonstrate_fixed_store_copies_and_generate_a_waveform_at_64_bits/SubwordWriteHarness.vcd "$(WAVE_DIR)/subwordwrite64.vcd"

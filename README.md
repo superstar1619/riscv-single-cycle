@@ -4,9 +4,15 @@
 
 ## 当前交付
 
-**第七章第 8 轮：IEU。** 完整连接已完善的 Controller 与 Datapath，新增 `MemRW={MemRead,MemWrite}`、`Funct3` 输出，保留原地址、存储数据和观察接口。独立指令序列验证整数运算、六种分支、跳转、写回及访存请求；加载数据由测试环境提供。参数、连接、测试和 RTL 路径见 [IEU 核验报告](docs/modules/07-ieu.md)。本轮按用户要求与进度报告一同提交，**停在第 8 轮，等待后续执行指示；下一轮为 SwByteMask。**
+**第七章第 10 轮：SubwordWrite。** 新增独立组合写数据复制模块，32 位支持 SB/SH/SW，独立 64 位增加 SD；校验完整 Funct3，非法编码输出零。源码、中文测试说明、两种宽度 RTL 和波形见 [SubwordWrite 核验报告](docs/modules/14-subwordwrite.md)。**用户已授权提交后继续第 11 轮 SubwordRead；下一轮交付后停止等待核验。** SwByteMask 与 SubwordWrite 尚未接入 LSU，整机仍采用原有字 RAM。
 
-后续恢复执行请先读 [第七章进度与后续执行报告](docs/chapter7-progress.md)：包含前 8 轮提交定位、当前接口和整机边界、验证复现、剩余 8 轮验收与逐轮停点规则。
+后续恢复执行请先读 [第七章进度与后续执行报告](docs/chapter7-progress.md)：包含前 10 轮交付状态、当前接口和整机边界、验证复现、剩余 6 轮验收与逐轮停点规则。
+
+第 10 轮验证：SubwordWrite 的 12 项测试通过；全工程 15 个套件、133 项全部通过；现有两种 CPU 配置的六次 RTL 仿真全部 PASS。本次将第 9 轮 SwByteMask 一并提交；该模块是后续子字存储的字节写使能逻辑，予以保留。
+
+本轮可读性更新：源码按三步展示复制与选择，测试显式列出功能编码和期望常量，报告用对照表说明 CVW 差异及波形各阶段。
+
+第 8 轮 IEU 已提交为 `89b1e58`：导出 `MemRW={MemRead,MemWrite}` 与原始 `Funct3`，独立验证全部 37 类 RV32 指令；加载数据由外部提供，详见 [IEU 核验报告](docs/modules/07-ieu.md)。
 
 第 7 轮 Datapath 已核验并按用户指示提交为 `ffd13e5`：完善 LUI/AUIPC 写回、JAL/JALR 链接值及 JALR 目标位 0 清零，详见 [Datapath 核验报告](docs/modules/06-datapath.md)。
 
@@ -33,6 +39,8 @@
 | ALU | [03-alu.md](docs/modules/03-alu.md) | [ALU.scala](src/main/scala/riscvsingle/ieu/ALU.scala) | [ALUSpec.scala](src/test/scala/riscvsingle/ieu/ALUSpec.scala) | [32 位](generated/alu/ALU.v)、[64 位](generated/alu64/ALU.v) |
 | RegFile | [04-regfile.md](docs/modules/04-regfile.md) | [RegFile.scala](src/main/scala/riscvsingle/ieu/RegFile.scala) | [RegFileSpec.scala](src/test/scala/riscvsingle/ieu/RegFileSpec.scala) | [32 位](generated/regfile/RegFile.v)、[64 位](generated/regfile64/RegFile.v) |
 | Shifter | [12-shifter.md](docs/modules/12-shifter.md) | [Shifter.scala](src/main/scala/riscvsingle/ieu/Shifter.scala) | [ShifterSpec.scala](src/test/scala/riscvsingle/ieu/ShifterSpec.scala) | [32 位](generated/shifter/Shifter.v)、[64 位](generated/shifter64/Shifter.v) |
+| SwByteMask | [13-swbytemask.md](docs/modules/13-swbytemask.md) | [SwByteMask.scala](src/main/scala/riscvsingle/lsu/SwByteMask.scala) | [SwByteMaskSpec.scala](src/test/scala/riscvsingle/lsu/SwByteMaskSpec.scala) | [32 位](generated/swbytemask/SwByteMask.v)、[64 位](generated/swbytemask64/SwByteMask.v) |
+| SubwordWrite | [14-subwordwrite.md](docs/modules/14-subwordwrite.md) | [SubwordWrite.scala](src/main/scala/riscvsingle/lsu/SubwordWrite.scala) | [SubwordWriteSpec.scala](src/test/scala/riscvsingle/lsu/SubwordWriteSpec.scala) | [32 位](generated/subwordwrite/SubwordWrite.v)、[64 位](generated/subwordwrite64/SubwordWrite.v) |
 | Controller | [05-controller.md](docs/modules/05-controller.md) | [Controller.scala](src/main/scala/riscvsingle/ieu/Controller.scala) | [ControllerSpec.scala](src/test/scala/riscvsingle/ieu/ControllerSpec.scala) | [Controller.v](generated/controller/Controller.v) |
 | Datapath | [06-datapath.md](docs/modules/06-datapath.md) | [Datapath.scala](src/main/scala/riscvsingle/ieu/Datapath.scala) | [DatapathSpec.scala](src/test/scala/riscvsingle/ieu/DatapathSpec.scala) | [Datapath.v](generated/datapath/Datapath.v) |
 | IEU | [07-ieu.md](docs/modules/07-ieu.md) | [IEU.scala](src/main/scala/riscvsingle/ieu/IEU.scala) | [IEUSpec.scala](src/test/scala/riscvsingle/ieu/IEUSpec.scala) | [IEU.v](generated/ieu/IEU.v) |
@@ -74,6 +82,10 @@ make generate-cmp
 make generate-cmp WIDTH=64 CMP_TARGET_DIR=generated/cmp64
 make generate-shifter
 make generate-shifter WIDTH=64 SHIFTER_TARGET_DIR=generated/shifter64
+make generate-swbytemask
+make generate-swbytemask WIDTH=64 SWBYTEMASK_TARGET_DIR=generated/swbytemask64
+make generate-subwordwrite
+make generate-subwordwrite WIDTH=64 SUBWORDWRITE_TARGET_DIR=generated/subwordwrite64
 make generate-alu
 make generate-alu WIDTH=64 ALU_TARGET_DIR=generated/alu64
 make generate-regfile
@@ -102,6 +114,10 @@ make generate-cmp SBT=./scripts/sbt-local.sh
 make generate-cmp SBT=./scripts/sbt-local.sh WIDTH=64 CMP_TARGET_DIR=generated/cmp64
 make generate-shifter SBT=./scripts/sbt-local.sh
 make generate-shifter SBT=./scripts/sbt-local.sh WIDTH=64 SHIFTER_TARGET_DIR=generated/shifter64
+make generate-swbytemask SBT=./scripts/sbt-local.sh
+make generate-swbytemask SBT=./scripts/sbt-local.sh WIDTH=64 SWBYTEMASK_TARGET_DIR=generated/swbytemask64
+make generate-subwordwrite SBT=./scripts/sbt-local.sh
+make generate-subwordwrite SBT=./scripts/sbt-local.sh WIDTH=64 SUBWORDWRITE_TARGET_DIR=generated/subwordwrite64
 make generate-alu SBT=./scripts/sbt-local.sh
 make generate-alu SBT=./scripts/sbt-local.sh WIDTH=64 ALU_TARGET_DIR=generated/alu64
 make generate-regfile SBT=./scripts/sbt-local.sh
@@ -135,7 +151,21 @@ LSU 使用 `sbt "runMain riscvsingle.GenerateLSU 64 generated/lsu"`。两个可�
 
 `make test-rtl` 使用 Verilator 和 C++17 编译器直接验证两份现有完整 CPU Verilog，测试仅通过五个生产顶层端口进行。可用 `make test-rtl VERILATOR=/path/to/verilator` 指定工具。脚本自动切换到项目根目录以加载镜像，将编译产物及日志放入 `target/rtl-test/{book,expanded}`，ccache 写入 `.cache/ccache`。修改 Chisel 后先执行上述两个 `generate-cpu` 命令，更新两份 RTL，再运行 `test-rtl`；该目标本身不重新生成硬件。
 
+SubwordWrite 模块测试：`./scripts/sbt-local.sh 'testOnly riscvsingle.lsu.SubwordWriteSpec'`。一条命令生成两个宽度的 VCD：
+
+```bash
+make test-subwordwrite-wave SBT=./scripts/sbt-local.sh
+gtkwave target/waveforms/subwordwrite32.vcd waves/subwordwrite32.gtkw
+gtkwave target/waveforms/subwordwrite64.vcd waves/subwordwrite64.gtkw
+```
+
+观察时钟仅在测试包装层；生产模块没有时钟或复位。VCD 位于被忽略的 `target/waveforms`，可用上述命令重建。
+
 ## 配置与目录
+
+SwByteMask 使用 `sbt "runMain riscvsingle.GenerateSwByteMask 64 generated/swbytemask64"`。两个可选参数依次为原生数据位宽和输出目录，默认 32、`generated/swbytemask`；Makefile 对应 `WIDTH` 和 `SWBYTEMASK_TARGET_DIR`。位宽只允许 32/64，模块没有时钟、复位或存储状态，不使用存储深度等共享配置；独立 64 位模块不改变 CPU 的 RV32 限制。
+
+SubwordWrite 使用 `sbt "runMain riscvsingle.GenerateSubwordWrite 64 generated/subwordwrite64"`。两个可选参数依次为数据位宽和输出目录，默认 32、`generated/subwordwrite`；Makefile 对应 `WIDTH` 和 `SUBWORDWRITE_TARGET_DIR`。位宽仅允许 32/64，不改变整机 RV32 范围。
 
 `CpuConfig` 默认值为 `xlen=32`、`imemDepth=64`、`dmemDepth=64`、`resetVector=0`、`instructionInitFile=None`。存储深度以 32 位字计，复位地址以字节计。配置类负责 elaboration 前的参数检查。RiscvSingle 将同一配置对象传给三个子模块：IEU 再传给 Datapath，当前仅消费 `xlen`；IROM 消费 `imemDepth` 和 `instructionInitFile`，地址宽度采用 `xlen`；IFU 使用 `xlen`、`resetVector` 并将配置传给 IROM；LSU 使用 `xlen` 和 `dmemDepth`。
 

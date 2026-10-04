@@ -1,0 +1,10 @@
+[timestart] 0
+[size] 1200 700
+[signals_width] 260
+[zoom] -1.0
+@28
+SubwordWriteHarness.clock
+SubwordWriteHarness.io_Funct3
+@22
+SubwordWriteHarness.io_WriteData
+SubwordWriteHarness.io_WriteDataWord

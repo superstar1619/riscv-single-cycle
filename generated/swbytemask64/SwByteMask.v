@@ -1,0 +1,21 @@
+module SwByteMask(
+  input  [2:0] io_Funct3, // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 20:14]
+  input  [2:0] io_ByteOffset, // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 20:14]
+  output [7:0] io_ByteMask // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 20:14]
+);
+  wire [3:0] _AccessBytes_T_1 = 3'h0 == io_Funct3 ? 4'h1 : 4'h0; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [3:0] _AccessBytes_T_3 = 3'h1 == io_Funct3 ? 4'h2 : _AccessBytes_T_1; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [3:0] _AccessBytes_T_5 = 3'h2 == io_Funct3 ? 4'h4 : _AccessBytes_T_3; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [3:0] AccessBytes = 3'h3 == io_Funct3 ? 4'h8 : _AccessBytes_T_5; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [7:0] _BaseMask_T_1 = 4'h1 == AccessBytes ? 8'h1 : 8'h0; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [7:0] _BaseMask_T_3 = 4'h2 == AccessBytes ? 8'h3 : _BaseMask_T_1; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [7:0] _BaseMask_T_5 = 4'h4 == AccessBytes ? 8'hf : _BaseMask_T_3; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [7:0] BaseMask = 4'h8 == AccessBytes ? 8'hff : _BaseMask_T_5; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [3:0] _Aligned_T_1 = AccessBytes - 4'h1; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 39:44]
+  wire [3:0] _GEN_0 = {{1'd0}, io_ByteOffset}; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 39:29]
+  wire [3:0] _Aligned_T_2 = _GEN_0 & _Aligned_T_1; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 39:29]
+  wire  Aligned = _Aligned_T_2 == 4'h0; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 39:52]
+  wire [14:0] _GEN_1 = {{7'd0}, BaseMask}; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 41:15]
+  wire [14:0] _ByteMask_T_2 = _GEN_1 << io_ByteOffset; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 41:15]
+  assign io_ByteMask = AccessBytes != 4'h0 & Aligned ? _ByteMask_T_2[7:0] : 8'h0; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 40:18]
+endmodule
