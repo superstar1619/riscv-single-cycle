@@ -3,6 +3,7 @@ VERILATOR ?= verilator
 WIDTH ?= 32
 TARGET_DIR ?= generated/extend
 CMP_TARGET_DIR ?= generated/cmp
+SHIFTER_TARGET_DIR ?= generated/shifter
 ALU_TARGET_DIR ?= generated/alu
 REGFILE_TARGET_DIR ?= generated/regfile
 REGISTER_COUNT ?= 32
@@ -19,13 +20,16 @@ DMEM_DEPTH ?= 64
 CPU_TARGET_DIR ?= generated/riscv-single
 WAVE_DIR ?= target/waveforms
 
-.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom generate-ifu generate-lsu generate-cpu test test-rtl test-wave clean
+.PHONY: generate generate-cmp generate-shifter generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom generate-ifu generate-lsu generate-cpu test test-rtl test-wave clean
 
 generate:
 	$(SBT) "runMain riscvsingle.GenerateExtend $(WIDTH) $(TARGET_DIR)"
 
 generate-cmp:
 	$(SBT) "runMain riscvsingle.GenerateCmp $(WIDTH) $(CMP_TARGET_DIR)"
+
+generate-shifter:
+	$(SBT) "runMain riscvsingle.GenerateShifter $(WIDTH) $(SHIFTER_TARGET_DIR)"
 
 generate-alu:
 	$(SBT) "runMain riscvsingle.GenerateALU $(WIDTH) $(ALU_TARGET_DIR)"

@@ -4,13 +4,15 @@
 
 ## 当前交付
 
-**第七章第 3 轮：RegFile。** 核对 §7.1.1 和图 7.2，保留满足要求的两读一写实现、完整数组直接索引，以及已有同步复位约定。补充验证全部非零寄存器在复位时保值、复位抑制正常写入和无时钟沿复位脉冲。参数、时序、验证和 RTL 路径见 [RegFile 核验报告](docs/modules/04-regfile.md)。**本轮停止，等待用户核验；明确通过并允许继续后才进入 Shifter。**
+**第七章第 4 轮：Shifter。** 新增教材漏斗移位模块，支持 SLL/SRL/SRA，保留 `A/Amt/Right/SubArith/Y` 接口；独立模块验证 32/64 位。本轮暂不接入 ALU，整机仍执行既有简化指令子集。参数、源字与偏移结构、验证和 RTL 路径见 [Shifter 核验报告](docs/modules/12-shifter.md)。**本轮停止，等待用户核验；明确通过并允许继续后才进入 ALU。**
+
+第 3 轮 RegFile 已核验并按用户指示提交为 `96576f0`：核对教材要求后保留既有硬件，补充全部非零寄存器复位保值、写入抑制和无时钟沿脉冲验证，详见 [RegFile 核验报告](docs/modules/04-regfile.md)。
 
 第 2 轮 Cmp 已核验并按用户指示提交为 `c8cec38`：保留 `R1/R2/Eq`，新增 `LT/LTU`，按教材 Code Example 7.1 翻转最高位后进行无符号比较，实现 `LT`。整机继续使用原有 `Eq` 连接，新增比较标志接通及六种分支译码留待对应轮次，详见 [Cmp 核验报告](docs/modules/02-cmp.md)。
 
 第 1 轮 Extend 已核验并按用户指示提交为 `db4ddc4`：`ImmSrc` 升级为 3 位，编码 `000/001/010/011/100` 对应 I/S/B/J/U，其他编码输出零，支持 32/64 位符号扩展。Datapath 将现有 2 位选择码补零后连接 Extend；LUI/AUIPC 的译码和写回留待对应轮次，详见 [Extend 核验报告](docs/modules/01-extend.md)。
 
-以下为第二章已核验交付记录；Extend、Cmp、RegFile 的当前说明以第七章更新报告和生成文件为准。
+以下为各模块索引，其中历史提交记录属于第二章；当前接口及第七章新增模块以更新报告和生成文件为准。
 
 **Extend**、**Cmp**、**ALU**、**RegFile**、**Controller**、**Datapath**、**IEU**、**IROM**、**IFU**、**LSU** 已核验并提交，提交号分别为 `d6cf8cc`、`4b96fd7`、`aa69b21`、`24f885f`、`668d141`、`b77a5cd`、`da62b51`、`58232c4`、`1c1cb34`、`b882f2d`。第 11 个模块 **RiscvSingle（CPU 顶层）** 已按用户指示提交，提交号为 `d218f06`。CPU 的 `XLEN` 仍限定为 32。
 
@@ -20,6 +22,7 @@
 | Cmp | [02-cmp.md](docs/modules/02-cmp.md) | [Cmp.scala](src/main/scala/riscvsingle/ieu/Cmp.scala) | [CmpSpec.scala](src/test/scala/riscvsingle/ieu/CmpSpec.scala) | [32 位](generated/cmp/Cmp.v)、[64 位](generated/cmp64/Cmp.v) |
 | ALU | [03-alu.md](docs/modules/03-alu.md) | [ALU.scala](src/main/scala/riscvsingle/ieu/ALU.scala) | [ALUSpec.scala](src/test/scala/riscvsingle/ieu/ALUSpec.scala) | [32 位](generated/alu/ALU.v)、[64 位](generated/alu64/ALU.v) |
 | RegFile | [04-regfile.md](docs/modules/04-regfile.md) | [RegFile.scala](src/main/scala/riscvsingle/ieu/RegFile.scala) | [RegFileSpec.scala](src/test/scala/riscvsingle/ieu/RegFileSpec.scala) | [32 位](generated/regfile/RegFile.v)、[64 位](generated/regfile64/RegFile.v) |
+| Shifter | [12-shifter.md](docs/modules/12-shifter.md) | [Shifter.scala](src/main/scala/riscvsingle/ieu/Shifter.scala) | [ShifterSpec.scala](src/test/scala/riscvsingle/ieu/ShifterSpec.scala) | [32 位](generated/shifter/Shifter.v)、[64 位](generated/shifter64/Shifter.v) |
 | Controller | [05-controller.md](docs/modules/05-controller.md) | [Controller.scala](src/main/scala/riscvsingle/ieu/Controller.scala) | [ControllerSpec.scala](src/test/scala/riscvsingle/ieu/ControllerSpec.scala) | [Controller.v](generated/controller/Controller.v) |
 | Datapath | [06-datapath.md](docs/modules/06-datapath.md) | [Datapath.scala](src/main/scala/riscvsingle/ieu/Datapath.scala) | [DatapathSpec.scala](src/test/scala/riscvsingle/ieu/DatapathSpec.scala) | [Datapath.v](generated/datapath/Datapath.v) |
 | IEU | [07-ieu.md](docs/modules/07-ieu.md) | [IEU.scala](src/main/scala/riscvsingle/ieu/IEU.scala) | [IEUSpec.scala](src/test/scala/riscvsingle/ieu/IEUSpec.scala) | [IEU.v](generated/ieu/IEU.v) |
@@ -28,7 +31,7 @@
 | LSU | [10-lsu.md](docs/modules/10-lsu.md) | [LSU.scala](src/main/scala/riscvsingle/lsu/LSU.scala) | [LSUSpec.scala](src/test/scala/riscvsingle/lsu/LSUSpec.scala) | [64 项](generated/lsu/LSU.v)、[128 项](generated/lsu128/LSU.v) |
 | RiscvSingle | [11-riscv-single.md](docs/modules/11-riscv-single.md) | [RiscvSingle.scala](src/main/scala/riscvsingle/RiscvSingle.scala) | [RiscvSingleSpec.scala](src/test/scala/riscvsingle/RiscvSingleSpec.scala) | [默认 CPU](generated/riscv-single/RiscvSingle.v)、[128 项、复位地址 0x100](generated/riscv-single128/RiscvSingle.v) |
 
-[统一配置](src/main/scala/riscvsingle/config/CpuConfig.scala) 提供 CPU 结构参数。Extend、Cmp、ALU、RegFile 可单独配置数据位宽，RegFile 还可配置寄存器数量；Controller 的端口位宽遵循固定的 RISC-V 指令字段和控制编码。Datapath、IEU 接受 `CpuConfig`，将 `xlen` 传递给端口与子模块，当前限定为 RV32 和 32 项寄存器。
+[统一配置](src/main/scala/riscvsingle/config/CpuConfig.scala) 提供 CPU 结构参数。Extend、Cmp、ALU、RegFile 可单独配置数据位宽，RegFile 还可配置寄存器数量；Shifter 位宽须为不小于 2 的二次幂，默认 32。Controller 的端口位宽遵循固定的 RISC-V 指令字段和控制编码。Datapath、IEU 接受 `CpuConfig`，将 `xlen` 传递给端口与子模块，当前限定为 RV32 和 32 项寄存器。
 
 RegFile 默认使用完整的 32 项 `Reg(Vec(...))`，下标直接对应寄存器编号。高有效同步 `reset` 仅将 `rf(0)` 清零，其他寄存器保持；正常写入跳过 0 号寄存器。读写编号均不减一。
 
@@ -59,6 +62,8 @@ make generate
 make generate WIDTH=64 TARGET_DIR=generated/extend64
 make generate-cmp
 make generate-cmp WIDTH=64 CMP_TARGET_DIR=generated/cmp64
+make generate-shifter
+make generate-shifter WIDTH=64 SHIFTER_TARGET_DIR=generated/shifter64
 make generate-alu
 make generate-alu WIDTH=64 ALU_TARGET_DIR=generated/alu64
 make generate-regfile
@@ -85,6 +90,8 @@ make generate SBT=./scripts/sbt-local.sh
 make generate SBT=./scripts/sbt-local.sh WIDTH=64 TARGET_DIR=generated/extend64
 make generate-cmp SBT=./scripts/sbt-local.sh
 make generate-cmp SBT=./scripts/sbt-local.sh WIDTH=64 CMP_TARGET_DIR=generated/cmp64
+make generate-shifter SBT=./scripts/sbt-local.sh
+make generate-shifter SBT=./scripts/sbt-local.sh WIDTH=64 SHIFTER_TARGET_DIR=generated/shifter64
 make generate-alu SBT=./scripts/sbt-local.sh
 make generate-alu SBT=./scripts/sbt-local.sh WIDTH=64 ALU_TARGET_DIR=generated/alu64
 make generate-regfile SBT=./scripts/sbt-local.sh
@@ -104,7 +111,7 @@ make generate-cpu SBT=./scripts/sbt-local.sh IMEM_DEPTH=128 DMEM_DEPTH=128 CPU_T
 
 `scripts/sbt-local.sh` 读取共享 JDK 和 sbt，将共享依赖缓存复制到本项目 `.cache/chisel` 后使用，避免修改共享工具目录。可以通过 `CHISEL_TOOLCHAIN_DIR` 和 `CHISEL_CACHE_DIR` 指定绝对路径。脚本关闭 sbt 构建服务器，并允许在无法创建启动套接字时继续批处理。
 
-`sbt run` 默认生成 Extend。也可以使用 `runMain` 指定 `riscvsingle.GenerateExtend`、`riscvsingle.GenerateCmp`、`riscvsingle.GenerateALU`、`riscvsingle.GenerateRegFile`、`riscvsingle.GenerateController`、`riscvsingle.GenerateDatapath` 或 `riscvsingle.GenerateIEU`。例如 `sbt "runMain riscvsingle.GenerateRegFile 64 generated/regfile64 32"`；RegFile 的第三个可选参数为寄存器数量，Makefile 对应 `REGISTER_COUNT`，默认 32。Controller、Datapath、IEU 各自接受一个可选的输出目录参数，如 `sbt "runMain riscvsingle.GenerateIEU generated/ieu"`，Makefile 对应 `IEU_TARGET_DIR`。`make clean` 调用 `sbt clean`，保留已生成的 Verilog 和模块报告。
+`sbt run` 默认生成 Extend。也可以使用 `runMain` 指定 `riscvsingle.GenerateExtend`、`riscvsingle.GenerateCmp`、`riscvsingle.GenerateShifter`、`riscvsingle.GenerateALU`、`riscvsingle.GenerateRegFile`、`riscvsingle.GenerateController`、`riscvsingle.GenerateDatapath` 或 `riscvsingle.GenerateIEU`。例如 `sbt "runMain riscvsingle.GenerateRegFile 64 generated/regfile64 32"`；RegFile 的第三个可选参数为寄存器数量，Makefile 对应 `REGISTER_COUNT`，默认 32。Shifter 使用 `sbt "runMain riscvsingle.GenerateShifter 64 generated/shifter64"`，两个可选参数依次为位宽和输出目录，Makefile 对应 `WIDTH` 和 `SHIFTER_TARGET_DIR`。Controller、Datapath、IEU 各自接受一个可选的输出目录参数，如 `sbt "runMain riscvsingle.GenerateIEU generated/ieu"`，Makefile 对应 `IEU_TARGET_DIR`。`make clean` 调用 `sbt clean`，保留已生成的 Verilog 和模块报告。
 
 IROM 使用 `sbt "runMain riscvsingle.GenerateIROM 64 generated/irom programs/riscvtest.memfile"`。三个可选参数依次为深度、输出目录、初始化文件，Makefile 分别对应 `IMEM_DEPTH`、`IROM_TARGET_DIR`、`INSTRUCTION_INIT_FILE`；将文件设为 `-` 表示不初始化。相对文件路径以仿真运行目录为基准；在项目根目录运行可直接使用默认镜像。默认镜像为 64 项，128 项生成示例的后 64 项未初始化；如需读取全部条目，提供与深度匹配的镜像。
 
