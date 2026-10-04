@@ -4,19 +4,23 @@
 
 ## 当前交付
 
-**第七章第 7 轮：Datapath。** 按教材加入 `AltResult`，为 LUI 选择立即数、JAL/JALR 选择外部 `PCPlus4`；AUIPC 使用当前 PC 加 U 型立即数。JALR 目标仅清除位 0，并保留原始加减器结果与 ALU 写回结果。参数、控制编码、内部信号、测试和 RTL 路径见 [Datapath 核验报告](docs/modules/06-datapath.md)。**本轮停止，等待用户核验；明确通过并允许继续后才进入 IEU。**
+**第七章第 8 轮：IEU。** 完整连接已完善的 Controller 与 Datapath，新增 `MemRW={MemRead,MemWrite}`、`Funct3` 输出，保留原地址、存储数据和观察接口。独立指令序列验证整数运算、六种分支、跳转、写回及访存请求；加载数据由测试环境提供。参数、连接、测试和 RTL 路径见 [IEU 核验报告](docs/modules/07-ieu.md)。本轮按用户要求与进度报告一同提交，**停在第 8 轮，等待后续执行指示；下一轮为 SwByteMask。**
 
-第 6 轮 Controller 已核验并按用户指示提交为 `ffbb866`：完善 RV32 表 7.1 译码、六种分支、完整 Funct7 合法性检查，以及 Jump/MemRW 控制，详见 [Controller 核验报告](docs/modules/05-controller.md)。本轮接入 Jump 与替代结果写回。
+后续恢复执行请先读 [第七章进度与后续执行报告](docs/chapter7-progress.md)：包含前 8 轮提交定位、当前接口和整机边界、验证复现、剩余 8 轮验收与逐轮停点规则。
 
-第 5 轮 ALU 已核验并按用户指示提交为 `715b7b0`：补齐 XOR、SLTU、SLL、SRL、SRA 并接入教材漏斗 Shifter，保留独立加减地址输出，详见 [ALU 核验报告](docs/modules/03-alu.md)。本轮完善其指令控制。
+第 7 轮 Datapath 已核验并按用户指示提交为 `ffd13e5`：完善 LUI/AUIPC 写回、JAL/JALR 链接值及 JALR 目标位 0 清零，详见 [Datapath 核验报告](docs/modules/06-datapath.md)。
 
-第 4 轮 Shifter 已核验并按用户指示提交为 `d9d7861`：教材漏斗结构支持 SLL/SRL/SRA，独立模块验证 32/64 位，详见 [Shifter 核验报告](docs/modules/12-shifter.md)。本轮 ALU 接入该模块。
+第 6 轮 Controller 已核验并按用户指示提交为 `ffbb866`：完善 RV32 表 7.1 译码、六种分支、完整 Funct7 合法性检查，以及 Jump/MemRW 控制，详见 [Controller 核验报告](docs/modules/05-controller.md)。第 7 轮已接入 Jump 与替代结果写回。
+
+第 5 轮 ALU 已核验并按用户指示提交为 `715b7b0`：补齐 XOR、SLTU、SLL、SRL、SRA 并接入教材漏斗 Shifter，保留独立加减地址输出，详见 [ALU 核验报告](docs/modules/03-alu.md)。第 6 轮已完善其指令控制。
+
+第 4 轮 Shifter 已核验并按用户指示提交为 `d9d7861`：教材漏斗结构支持 SLL/SRL/SRA，独立模块验证 32/64 位，详见 [Shifter 核验报告](docs/modules/12-shifter.md)。第 5 轮 ALU 已接入该模块。
 
 第 3 轮 RegFile 已核验并按用户指示提交为 `96576f0`：核对教材要求后保留既有硬件，补充全部非零寄存器复位保值、写入抑制和无时钟沿脉冲验证，详见 [RegFile 核验报告](docs/modules/04-regfile.md)。
 
-第 2 轮 Cmp 已核验并按用户指示提交为 `c8cec38`：保留 `R1/R2/Eq`，新增 `LT/LTU`，按教材 Code Example 7.1 翻转最高位后进行无符号比较，实现 `LT`。整机继续使用原有 `Eq` 连接，新增比较标志接通及六种分支译码留待对应轮次，详见 [Cmp 核验报告](docs/modules/02-cmp.md)。
+第 2 轮 Cmp 已核验并按用户指示提交为 `c8cec38`：保留 `R1/R2/Eq`，新增 `LT/LTU`，按教材 Code Example 7.1 翻转最高位后进行无符号比较，实现 `LT`。该轮整机沿用原有 `Eq` 连接，新增比较标志及六种分支已在后续 Controller/Datapath 轮次接通，详见 [Cmp 核验报告](docs/modules/02-cmp.md)。
 
-第 1 轮 Extend 已核验并按用户指示提交为 `db4ddc4`：`ImmSrc` 升级为 3 位，编码 `000/001/010/011/100` 对应 I/S/B/J/U，其他编码输出零，支持 32/64 位符号扩展。Datapath 将现有 2 位选择码补零后连接 Extend；LUI/AUIPC 的译码和写回留待对应轮次，详见 [Extend 核验报告](docs/modules/01-extend.md)。
+第 1 轮 Extend 已核验并按用户指示提交为 `db4ddc4`：`ImmSrc` 升级为 3 位，编码 `000/001/010/011/100` 对应 I/S/B/J/U，其他编码输出零，支持 32/64 位符号扩展。该轮 Datapath 将原有 2 位选择码补零后连接 Extend；3 位选择码与 LUI/AUIPC 已在后续 Controller/Datapath 轮次接通，详见 [Extend 核验报告](docs/modules/01-extend.md)。
 
 以下为各模块索引，其中历史提交记录属于第二章；当前接口及第七章新增模块以更新报告和生成文件为准。
 
@@ -127,7 +131,7 @@ LSU 使用 `sbt "runMain riscvsingle.GenerateLSU 64 generated/lsu"`。两个可�
 
 完整 CPU 使用 `sbt "runMain riscvsingle.GenerateRiscvSingle 64 64 generated/riscv-single programs/riscvtest.memfile 0"`。五个可选参数依次为指令深度、数据深度、输出目录、初始化文件、复位字节地址，分别对应 Makefile 的 `IMEM_DEPTH`、`DMEM_DEPTH`、`CPU_TARGET_DIR`、`INSTRUCTION_INIT_FILE`、`RESET_VECTOR`。文件参数 `-` 表示不初始化指令内容；复位地址支持十进制和 `0x`/`0X` 十六进制。默认生成加载书中程序镜像。
 
-128 项 CPU 示例使用完整的 [配置测试镜像](programs/rv32-configtest.memfile)，从 0x100 执行测试程序，验证 RAM 字 127 与字 63 独立、负偏移加载、jal 跳转与链接值。单独验证整机可执行 `./scripts/sbt-local.sh 'testOnly riscvsingle.RiscvSingleSpec'`。当前支持书中的简化 RV32 子集，尚无完整 RV32I 合法性检查、异常、CSR 或外部总线接口；程序文件加载仍属于仿真初始化，FPGA/ASIC 程序固化尚未实现。
+128 项 CPU 示例使用完整的 [配置测试镜像](programs/rv32-configtest.memfile)，从 0x100 执行测试程序，验证 RAM 字 127 与字 63 独立、负偏移加载、jal 跳转与链接值。单独验证整机可执行 `./scripts/sbt-local.sh 'testOnly riscvsingle.RiscvSingleSpec'`。当前 IEU 已支持第七章表 7.1 的 RV32 指令译码与执行，整机 LSU 仍为原有字访存，子字提取、扩展及字节写掩码待后续轮次接入。异常、CSR 和外部总线接口不在本阶段范围；程序文件加载仍属于仿真初始化，FPGA/ASIC 程序固化尚未实现。
 
 `make test-rtl` 使用 Verilator 和 C++17 编译器直接验证两份现有完整 CPU Verilog，测试仅通过五个生产顶层端口进行。可用 `make test-rtl VERILATOR=/path/to/verilator` 指定工具。脚本自动切换到项目根目录以加载镜像，将编译产物及日志放入 `target/rtl-test/{book,expanded}`，ccache 写入 `.cache/ccache`。修改 Chisel 后先执行上述两个 `generate-cpu` 命令，更新两份 RTL，再运行 `test-rtl`；该目标本身不重新生成硬件。
 
