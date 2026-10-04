@@ -5,17 +5,16 @@ import chisel3.util.log2Ceil
 import chisel3.util.experimental.loadMemoryFromFileInline
 import riscvsingle.config.CpuConfig
 
-/** Byte-addressed, combinational instruction read interface. */
+/** 字节地址输入与固定 32 位指令输出；保留原公开 a/rd 名称。 */
 final class IROMIO(config: CpuConfig) extends Bundle {
   val a = Input(UInt(config.xlen.W))
   val rd = Output(UInt(32.W))
 }
 
-/** Asynchronous instruction ROM, Code Example 2.15, p. 62.
-  * Only the word-index bits are decoded: low byte bits and upper address
-  * bits are ignored, preserving the book's address aliasing behavior.
-  * File contents are loaded at simulation initialization, not reset.
-  * Without an initialization file, memory contents are unspecified.
+/** 教材 §7.1.5 的组合取指 ROM，参考 CVW ifu/irom.sv 的容量内字索引。
+  * 每项固定 32 位；忽略低两位和容量外高位，保持地址回绕。
+  * 按教材单周期要求不保存读地址，区别于 CVW 的同步 ROM 接口。
+  * 镜像只在仿真初始化时加载，不随复位重载；未覆盖的内容未指定。
   */
 final class IROM(val config: CpuConfig = CpuConfig()) extends RawModule {
   val io = IO(new IROMIO(config))
@@ -27,7 +26,6 @@ final class IROM(val config: CpuConfig = CpuConfig()) extends RawModule {
   val ROM = Mem(config.imemDepth, UInt(32.W))
   config.instructionInitFile.foreach(path => loadMemoryFromFileInline(ROM, path))
 
-  // Mem has zero read latency. Its FIRRTL read-port clock is unused;
-  // tie it low so the production RawModule needs no clock/reset ports.
+  // Mem 的零延迟读口不使用时钟；常低占位不会引入生产 clk/reset 端口。
   io.rd := ROM.read(WordIndex, 0.B.asClock)
 }

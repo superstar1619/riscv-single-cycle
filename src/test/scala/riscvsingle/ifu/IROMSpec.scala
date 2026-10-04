@@ -56,7 +56,7 @@ class IROMSpec extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "IROM"
 
   for (depth <- Seq(2, 64, 128)) {
-    it should s"read every initialized word asynchronously and alias byte and upper address bits at depth $depth" in {
+    it should s"read all $depth words and address aliases without a clock edge" in {
       val random = new Random(0x215 + depth)
       val words = Seq.tabulate(depth) { index =>
         if (index == 0) BigInt(0) else if (index == depth - 1) mask else BigInt(32, random)
@@ -71,7 +71,8 @@ class IROMSpec extends AnyFlatSpec with ChiselScalatestTester {
         val bytes = BigInt(depth) * 4
         val aliases = Seq(BigInt(0), bytes, BigInt(1) << 31, mask ^ (bytes - 1))
         // No clock steps: successive address changes must immediately select data.
-        for (index <- random.shuffle((0 until depth).toVector); offset <- 0 until 4; alias <- aliases) {
+        for (index <- random.shuffle((0 until depth).toVector);
+            offset <- 0 until 4; alias <- aliases) {
           val address = (BigInt(index) * 4 + offset) | alias
           dut.io.a.poke(address.U)
           dut.io.rd.expect(words(index).U)
@@ -120,7 +121,7 @@ class IROMSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "emit two book ports, an asynchronous memory, and optional inline hexadecimal initialization" in {
+  it should "emit two ports and an asynchronous ROM with optional initialization" in {
     for (file <- Seq(None, Some(bookFile))) {
       val targetDir = Files.createTempDirectory("irom-interface-")
       val verilog = (new ChiselStage).emitVerilog(new IROM(CpuConfig(instructionInitFile = file)),
@@ -139,6 +140,37 @@ class IROMSpec extends AnyFlatSpec with ChiselScalatestTester {
         "Only a configured initialization file should emit readmemh")
       file.foreach(path => assert(verilog.contains(s"$$readmemh(\"$path\", ROM);"),
         "The configured path must appear in the memory initialization"))
+    }
+  }
+
+  it should "map the full expanded image across the nonzero reset-vector boundary" in {
+    val config = CpuConfig(imemDepth = 128,
+      instructionInitFile = Some("programs/rv32-configtest.memfile"))
+    test(new IROMHarness(config)) { dut =>
+      // 地址、机器码是独立固定常量；同时确认边界两侧与最大地址别名。
+      val cases = Seq(0xfcL -> "00000013", 0x100L -> "01f00093",
+        0x108L -> "fe112ea3", 0x134L -> "00000063", 0x1fcL -> "00000013",
+        0x300L -> "01f00093", 0x80000108L -> "fe112ea3",
+        0xffffffffL -> "00000013")
+      for ((address, instruction) <- cases) {
+        dut.io.a.poke(BigInt(address).U)
+        dut.io.rd.expect(BigInt(instruction, 16).U) // 不推进时钟。
+      }
+    }
+  }
+
+  it should "retain loaded instructions through wrapper reset clock edges" in {
+    test(new IROMHarness(CpuConfig(instructionInitFile = Some(bookFile)))) { dut =>
+      dut.io.a.poke(0.U)
+      dut.io.rd.expect("h00500113".U)
+      dut.reset.poke(true.B)
+      dut.clock.step(3)
+      dut.io.rd.expect("h00500113".U)
+      dut.io.a.poke(0x50.U)
+      dut.io.rd.expect("h00210063".U)
+      dut.reset.poke(false.B)
+      dut.clock.step()
+      dut.io.rd.expect("h00210063".U) // 生产 ROM 无 reset 或重新加载路径。
     }
   }
 }

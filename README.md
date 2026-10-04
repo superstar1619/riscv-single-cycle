@@ -4,13 +4,13 @@
 
 ## 当前交付
 
-**第七章第 13 轮：LSU。** 连接 SwByteMask、SubwordWrite、DTIM 和 SubwordRead，支持 RV32 的 SB/SH/SW 与 LB/LH/LW/LBU/LHU；非法或未对齐读零、不写，保留组合读、上升沿写、小端与容量回绕。源码、中文测试、64/128 项 RTL 和波形见 [LSU 第七章核验报告](docs/modules/17-lsu-chapter7.md)。**本轮停止，等待用户核验；下一轮为 IROM。** CPU 已补上 MemRW/Funct3 的必要连线；完整整机验收留待第 16 轮。
+**第七章第 14 轮：IROM 核验完成。** 保留教材组合取指与容量回绕，补充完整扩容镜像边界和复位保持测试；模块 8/8、全工程 181/181 通过。见 [IROM 第七章报告](docs/modules/18-irom-chapter7.md)。按最新指令连续完成 IFU、RiscvSingle，每轮测试通过后提交，全部模块结束后统一生成并核对波形。
 
-本轮验证：LSU 两个套件共 17 项测试通过；全工程 18 个套件、179 项全部通过；重新生成的两种 CPU 配置六次 RTL 仿真全部 PASS。两种容量 LSU RTL 均通过 lint。扩容镜像的 SW 改为实际地址 508，适应自然对齐规则；原书程序和扩容签名保持。
+第 11–13 轮 SubwordRead、DTIM、LSU 已补提交为 `f826665`。RV32 子字数据路径已连接，最终整机验收与复位写入屏蔽正在后续轮完成。
 
 第 9 轮 SwByteMask、第 10 轮 SubwordWrite 及可读性更新已按用户要求提交为 `886e708`。SwByteMask 是教材图 7.9 和后续 LSU/DTIM 所需的字节写使能模块，保留交付。
 
-后续恢复执行请先读 [第七章进度与后续执行报告](docs/chapter7-progress.md)：包含前 13 轮交付、当前接口和整机边界、验证命令及剩余 3 轮验收。第 11 轮 [SubwordRead](docs/modules/15-subwordread.md)、第 12 轮 [DTIM](docs/modules/16-dtim.md) 与本轮均保留为未提交交付。
+后续恢复执行请先读 [第七章进度与后续执行报告](docs/chapter7-progress.md)：记录当前交付、接口和剩余验收；用户最新要求是逐轮测试后提交、最后统一核对波形。
 
 第 8 轮 IEU 已提交为 `89b1e58`：导出 `MemRW={MemRead,MemWrite}` 与原始 `Funct3`，独立验证全部 37 类 RV32 指令；加载数据由外部提供，详见 [IEU 核验报告](docs/modules/07-ieu.md)。
 
@@ -46,7 +46,7 @@
 | Controller | [05-controller.md](docs/modules/05-controller.md) | [Controller.scala](src/main/scala/riscvsingle/ieu/Controller.scala) | [ControllerSpec.scala](src/test/scala/riscvsingle/ieu/ControllerSpec.scala) | [Controller.v](generated/controller/Controller.v) |
 | Datapath | [06-datapath.md](docs/modules/06-datapath.md) | [Datapath.scala](src/main/scala/riscvsingle/ieu/Datapath.scala) | [DatapathSpec.scala](src/test/scala/riscvsingle/ieu/DatapathSpec.scala) | [Datapath.v](generated/datapath/Datapath.v) |
 | IEU | [07-ieu.md](docs/modules/07-ieu.md) | [IEU.scala](src/main/scala/riscvsingle/ieu/IEU.scala) | [IEUSpec.scala](src/test/scala/riscvsingle/ieu/IEUSpec.scala) | [IEU.v](generated/ieu/IEU.v) |
-| IROM | [08-irom.md](docs/modules/08-irom.md) | [IROM.scala](src/main/scala/riscvsingle/ifu/IROM.scala) | [IROMSpec.scala](src/test/scala/riscvsingle/ifu/IROMSpec.scala) | [64 项](generated/irom/IROM.v)、[128 项](generated/irom128/IROM.v) |
+| IROM | [第七章](docs/modules/18-irom-chapter7.md)、[第二章历史](docs/modules/08-irom.md) | [IROM.scala](src/main/scala/riscvsingle/ifu/IROM.scala) | [IROMSpec.scala](src/test/scala/riscvsingle/ifu/IROMSpec.scala) | [64 项](generated/irom/IROM.v)、[128 项](generated/irom128/IROM.v) |
 | IFU | [09-ifu.md](docs/modules/09-ifu.md) | [IFU.scala](src/main/scala/riscvsingle/ifu/IFU.scala) | [IFUSpec.scala](src/test/scala/riscvsingle/ifu/IFUSpec.scala) | [默认](generated/ifu/IFU.v)、[128 项、复位地址 0x100](generated/ifu128/IFU.v) |
 | LSU | [第七章](docs/modules/17-lsu-chapter7.md)、[第二章历史](docs/modules/10-lsu.md) | [LSU.scala](src/main/scala/riscvsingle/lsu/LSU.scala) | [字访存](src/test/scala/riscvsingle/lsu/LSUSpec.scala)、[子字访存](src/test/scala/riscvsingle/lsu/LSUSubwordSpec.scala) | [64 项](generated/lsu/LSU.v)、[128 项](generated/lsu128/LSU.v) |
 | RiscvSingle | [11-riscv-single.md](docs/modules/11-riscv-single.md) | [RiscvSingle.scala](src/main/scala/riscvsingle/RiscvSingle.scala) | [RiscvSingleSpec.scala](src/test/scala/riscvsingle/RiscvSingleSpec.scala) | [默认 CPU](generated/riscv-single/RiscvSingle.v)、[128 项、复位地址 0x100](generated/riscv-single128/RiscvSingle.v) |

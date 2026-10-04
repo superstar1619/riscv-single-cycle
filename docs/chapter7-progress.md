@@ -4,9 +4,9 @@
 
 ## 1. 当前停点与提交定位
 
-**第七章 16 轮计划已交付前 13 轮；第 9/10 轮已提交，当前停在 LSU 等待核验，下一轮为第 14 轮 IROM。** 执行单元已接通表 7.1 的 RV32 指令控制、运算、分支和跳转；四个访存模块已连接 LSU，CPU 补上 MemRW/Funct3 后接入子字数据路径。完整整机签名、额外观察接口和复位期间写入屏蔽仍待第 16 轮。
+**第七章 16 轮计划已交付前 14 轮；第 11–13 轮已补提交为 `f826665`，IROM 已核验，继续 IFU 与 CPU。** 执行单元已接通表 7.1 的 RV32 指令控制、运算、分支和跳转；四个访存模块已连接 LSU，CPU 补上 MemRW/Funct3 后接入子字数据路径。完整整机签名、额外观察接口和复位期间写入屏蔽仍待第 16 轮。
 
-第 8 轮 IEU 已提交为 `89b1e58`。此前按用户指令将第 9 轮 SwByteMask、第 10 轮 SubwordWrite 及可读性更新提交为 `886e708`，随后完成第 11 轮 SubwordRead、第 12 轮 DTIM。本次收到“继续”后完成第 13 轮 LSU；第 11/12/13 轮均保留为未提交交付，等待用户检查，未合并或推送。
+第 8 轮 IEU 已提交为 `89b1e58`。此前按用户指令将第 9 轮 SwByteMask、第 10 轮 SubwordWrite 及可读性更新提交为 `886e708`，随后完成第 11 轮 SubwordRead、第 12 轮 DTIM。第 11–13 轮现已补提交为 `f826665`。用户 10-05 最新要求：后续每轮测试通过后 git commit，连续完成剩余模块；全部结束后统一生成/核对波形，不再逐轮等待波形检查。未合并或推送。
 
 SwByteMask 是教材图 7.9 中 LSU/DTIM 所需的字节写使能模块，用于 SB/SH/SW 只更新指定字节，因此保留源码、生成入口、测试与 RTL；第 13 轮已经接入 LSU 和 CPU。
 
@@ -35,9 +35,11 @@ git diff -- docs/chapter7-progress.md
 | 8 | IEU | Controller/Datapath 完整连接；导出 MemRW/Funct3；独立程序和参考模型验证全部 37 类指令。 | `89b1e58`；[07-ieu.md](modules/07-ieu.md) |
 | 9 | SwByteMask | 独立组合掩码；32 位 SB/SH/SW、64 位增加 SD；完整 Funct3、自然对齐，非法/未对齐输出零；第 13 轮接入 LSU。 | `886e708`；[13-swbytemask.md](modules/13-swbytemask.md) |
 | 10 | SubwordWrite | 纯组合低位数据复制；32 位 SB/SH/SW、64 位增加 SD；完整 Funct3 校验，非法编码输出零；两种宽度波形，第 13 轮接入 LSU。 | `886e708`；[14-subwordwrite.md](modules/14-subwordwrite.md) |
-| 11 | SubwordRead | 逐级小端子字选择与符号/零扩展；RV32 五种加载，独立 RV64 增 LD/LWU；非法编码输出零；两种宽度波形，第 13 轮接入 LSU。 | 工作区未提交；[15-subwordread.md](modules/15-subwordread.md) |
-| 12 | DTIM | 独立 32/64 位 RAM；组合读、上升沿逐字节掩码写；读取禁用输出零，无复位/初始化；容量回绕，第 13 轮接入 LSU。 | 工作区未提交；[16-dtim.md](modules/16-dtim.md) |
-| 13 | LSU | RV32 三种存储、五种加载，四模块连接；非法/未对齐读零、不写；双写使能、组合读/边沿写；CPU 必要接口适配、64/128 项 RTL 与波形。 | 工作区未提交，等待核验；[17-lsu-chapter7.md](modules/17-lsu-chapter7.md) |
+| 11 | SubwordRead | 逐级小端子字选择与符号/零扩展；RV32 五种加载，独立 RV64 增 LD/LWU；非法编码输出零；两种宽度波形，第 13 轮接入 LSU。 | `f826665`；[15-subwordread.md](modules/15-subwordread.md) |
+| 12 | DTIM | 独立 32/64 位 RAM；组合读、上升沿逐字节掩码写；读取禁用输出零，无复位/初始化；容量回绕，第 13 轮接入 LSU。 | `f826665`；[16-dtim.md](modules/16-dtim.md) |
+| 13 | LSU | RV32 三种存储、五种加载，四模块连接；非法/未对齐读零、不写；双写使能、组合读/边沿写；CPU 必要接口适配、64/128 项 RTL 与波形。 | `f826665`；[17-lsu-chapter7.md](modules/17-lsu-chapter7.md) |
+
+| 14 | IROM | 保留组合取指、字节映射/容量回绕；补充完整扩容镜像边界与复位保持，8 项模块/181 项全工程通过。 | 见提交日志；[18-irom-chapter7.md](modules/18-irom-chapter7.md) |
 
 报告编号沿用既有模块目录，**不等于第七章执行轮次**：例如 Shifter 的报告是 `12-shifter.md`，其执行轮次为 4。新增模块应使用独立报告并更新 README 索引，不覆盖已有报告。
 
@@ -212,11 +214,10 @@ make test-lsu-wave SBT=./scripts/sbt-local.sh
 
 ## 5. 剩余轮次与验收要求
 
-以下每行都是独立轮次，**完成该行的测试、RTL、报告后立即停止**。接口连线和生成入口适配归入当前轮，但不提前实现下一模块。
+按 10-05 最新指令，每轮测试、RTL和报告完成后提交并连续推进；中间不主动生成或核对波形，全部模块完成后统一核对。
 
 | 轮次 / 模块 | 本轮接口与功能 | 核验重点 |
 | --- | --- | --- |
-| **14 · IROM（下一轮）** | 核对取指存储；保留组合读取、容量、文件初始化、地址切片映射。 | 64/128 项、镜像、不同地址与高地址映射；说明仿真初始化边界。 |
 | 15 · IFU | 核对 PC、PC+4、目标选择和 IROM；保留同步复位、resetVector，不重复清 JALR 目标位。 | 顺序/分支/跳转、回绕、无边沿 reset 脉冲。 |
 | 16 · RiscvSingle | 接通升级 IFU/IEU/LSU；保留观察输出，新增 MemRW/Funct3/ByteMask；顶层复位期间禁止正常寄存器和存储写入。 | 第二章程序与第七章完整签名、子字事务、不同容量/复位地址、Chisel 和生成 RTL。 |
 
@@ -228,17 +229,7 @@ make test-lsu-wave SBT=./scripts/sbt-local.sh
 
 后续执行者先读本报告、README、相关模块源码及对应核验报告，再确认 git 状态和最新用户授权。不要把第二章已实现的 IROM/IFU/LSU/RiscvSingle 当作已完成第七章的后续核验。
 
-下一轮仅处理 **IROM**，须先明确核验通过本轮并允许继续：
-
-1. 重读教材 §7.1.5 和 CVW `/home/unlastingstar/cvw/src/ifu/irom.sv`，核对既有 IROM、CpuConfig、生成入口、镜像与测试；采用单周期组合取指，不移植流水线、缓存或总线接口。
-2. 保留 32 位指令、以字为单位的容量与字节地址映射、文件初始化和容量回绕；补充必要定向/参数验证，区分仿真加载与 FPGA/ASIC 固化，不改变 PC/JALR 或 LSU 行为。
-3. 运行模块测试及 `./scripts/sbt-local.sh test`，生成 64/128 项独立 RTL、简短中文测试说明和波形，核对实际端口；如硬件改变再更新 CPU RTL，保持已有合法程序与六次 RTL 回归通过，不提前实施第 16 轮完整验收。
-4. 在 `docs/modules` 新增独立报告，更新 README 索引及本进度表，记录实际命令/结果/RTL 路径/整机接通边界。
-5. 标记“本轮停止，等待用户核验”，交付后停止；只有明确核验通过并允许继续，才进入下一轮。不自动提交、合并或连续实施；用户明确要求提交时执行相应提交。
-
-每份模块报告须包含：教材/CVW 依据，参数默认值与合法范围，全部端口的方向/类型/位宽，功能编码和边界，内部信号及子模块连接，Chisel 名称与实际 RTL 名称区别，验证命令/结果/生成路径/接通状态，以及停点说明。
-
-整机轮重新生成默认与扩容 RTL，更新 Verilator 验证脚本以检查子字写入，再运行 `make test-rtl`。程序先建立寄存器和 RAM 状态，再通过存储签名验收。
+第 14 轮已完成 IROM 核验（8/8、全工程181/181），报告为 [18-irom-chapter7.md](modules/18-irom-chapter7.md)。接下来顺序完成 IFU、RiscvSingle，每轮测试通过后提交。最终提供完整 RV32 汇编、机器码与两种配置的 Chisel/RTL 验收，再统一生成、核对波形并提交交付。保留同步复位、小端、容量回绕和不移植流水线/缓存/总线的范围。
 
 ## 7. 资料入口
 
@@ -246,4 +237,4 @@ make test-lsu-wave SBT=./scripts/sbt-local.sh
 - CVW：`/home/unlastingstar/cvw/src`；执行单元参照 `ieu/{ieu,controller,datapath}.sv`，访存参照 `lsu/{swbytemask,subwordwrite,subwordread,dtim,lsu}.sv`。只参考本轮相关结构，不移植其流水线或扩展接口。
 - [README 与模块索引](../README.md)、[统一配置](../src/main/scala/riscvsingle/config/CpuConfig.scala)、[IEU 当前报告](modules/07-ieu.md)、[RTL 整机验证说明](12-rtl-validation.md)。
 
-**本次停点：第 9/10 轮已提交为 `886e708`；第 11 轮 SubwordRead、第 12 轮 DTIM、第 13 轮 LSU 已交付、尚未提交。本轮停止等待核验，下一轮为 IROM。**
+**当前推进：IROM 已通过，继续 IFU → RiscvSingle；每轮测试后提交，最终统一生成/核对波形。**
