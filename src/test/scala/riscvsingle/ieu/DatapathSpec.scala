@@ -35,8 +35,10 @@ private class ControlledDatapathHarness extends Module {
   datapath.reset := reset.asBool
   controller.io.Op := io.Instr(6, 0)
   controller.io.Funct3 := io.Instr(14, 12)
-  controller.io.Funct7b5 := io.Instr(30)
+  controller.io.Funct7 := io.Instr(31, 25)
   controller.io.Eq := datapath.io.Eq
+  controller.io.LT := datapath.io.LT
+  controller.io.LTU := datapath.io.LTU
   datapath.io.Funct3 := io.Instr(14, 12)
   datapath.io.ALUResultSrc := controller.io.ALUResultSrc
   datapath.io.ResultSrc := controller.io.ResultSrc
@@ -309,8 +311,9 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
     assert(ports == Map("clk" -> ("input", 1), "reset" -> ("input", 1),
       "io_Funct3" -> ("input", 3), "io_ALUResultSrc" -> ("input", 1),
       "io_ResultSrc" -> ("input", 1), "io_ALUSrc" -> ("input", 2),
-      "io_RegWrite" -> ("input", 1), "io_ImmSrc" -> ("input", 2),
+      "io_RegWrite" -> ("input", 1), "io_ImmSrc" -> ("input", 3),
       "io_ALUControl" -> ("input", 2), "io_Eq" -> ("output", 1),
+      "io_LT" -> ("output", 1), "io_LTU" -> ("output", 1),
       "io_PC" -> ("input", 32), "io_PCPlus4" -> ("input", 32),
       "io_Instr" -> ("input", 32), "io_IEUAdr" -> ("output", 32),
       "io_WriteData" -> ("output", 32), "io_ReadData" -> ("input", 32)))

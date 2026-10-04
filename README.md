@@ -4,7 +4,9 @@
 
 ## 当前交付
 
-**第七章第 5 轮：ALU。** 补齐 XOR、SLTU、SLL、SRL、SRA 并接入教材漏斗 Shifter；保留六个原有端口和 `ALUControl={SubArith,ALUOp}`，`IEUAdr` 始终输出加减器结果。完整指令译码留待 Controller 轮次，整机继续验证既有合法程序。参数、控制编码、内部信号、测试和 RTL 路径见 [ALU 核验报告](docs/modules/03-alu.md)。**本轮停止，等待用户核验；明确通过并允许继续后才进入 Controller。**
+**第七章第 6 轮：Controller。** 按教材主译码、分支逻辑和 ALU 译码结构完善 RV32 表 7.1 的控制；`ImmSrc` 为 3 位，接收完整 `Funct7` 及 `Eq/LT/LTU`，输出 `Jump` 和 `MemRW={MemRead,MemWrite}`。非法指令关闭写入和跳转。参数、控制编码、内部信号、测试和 RTL 路径见 [Controller 核验报告](docs/modules/05-controller.md)。**本轮停止，等待用户核验；明确通过并允许继续后才进入 Datapath。**
+
+第 5 轮 ALU 已核验并按用户指示提交为 `715b7b0`：补齐 XOR、SLTU、SLL、SRL、SRA 并接入教材漏斗 Shifter，保留独立加减地址输出，详见 [ALU 核验报告](docs/modules/03-alu.md)。本轮完善其指令控制。
 
 第 4 轮 Shifter 已核验并按用户指示提交为 `d9d7861`：教材漏斗结构支持 SLL/SRL/SRA，独立模块验证 32/64 位，详见 [Shifter 核验报告](docs/modules/12-shifter.md)。本轮 ALU 接入该模块。
 

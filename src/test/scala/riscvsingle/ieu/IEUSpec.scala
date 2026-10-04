@@ -31,10 +31,11 @@ class IEUSpec extends AnyFlatSpec with ChiselScalatestTester {
     (BigInt(imm >> 5) << 25) | (BigInt(rs2) << 20) | (BigInt(rs1) << 15) |
       (BigInt(2) << 12) | (BigInt(imm & 31) << 7) | 0x23
   }
-  private def bType(rs1: Int, rs2: Int, immediate: Int): BigInt = {
+  private def bType(rs1: Int, rs2: Int, immediate: Int, funct3: Int = 0): BigInt = {
     val imm = immediate & 0x1fff
     (BigInt((imm >> 12) & 1) << 31) | (BigInt((imm >> 5) & 63) << 25) |
       (BigInt(rs2) << 20) | (BigInt(rs1) << 15) |
+      (BigInt(funct3) << 12) |
       (BigInt((imm >> 1) & 15) << 8) | (BigInt((imm >> 11) & 1) << 7) | 0x63
   }
   private def jType(rd: Int, immediate: Int): BigInt = {
@@ -161,7 +162,7 @@ class IEUSpec extends AnyFlatSpec with ChiselScalatestTester {
         expectRegister(dut, 0, 0)
       }
       // These opcode values are undefined; rd=x5 and rs1=rs2=x5 stress suppression.
-      for (opcode <- Seq(0x00, 0x37, 0x67, 0x7f)) {
+      for (opcode <- Seq(0x00, 0x0f, 0x73, 0x7f)) {
         val instruction = (BigInt(5) << 20) | (BigInt(5) << 15) | (BigInt(5) << 7) | opcode
         drive(dut, instruction)
         dut.io.PCSrc.expect(false.B)
@@ -170,6 +171,38 @@ class IEUSpec extends AnyFlatSpec with ChiselScalatestTester {
         dut.clock.step()
         expectRegister(dut, 5, 19)
       }
+    }
+  }
+
+  it should "feed equality signed and unsigned comparisons into every branch function" in {
+    test(new IEUHarness) { dut =>
+      dut.reset.poke(false.B)
+      retire(dut, iType(1, 0, -1))
+      retire(dut, iType(2, 0, 1))
+      val values = Map(0 -> BigInt(0), 1 -> mask, 2 -> BigInt(1))
+      def signed(value: BigInt): BigInt = if (value.testBit(31)) value - (BigInt(1) << 32) else value
+      for ((rs1, rs2) <- Seq((1, 2), (2, 1), (1, 1), (0, 2), (2, 0));
+          funct3 <- 0 until 8) {
+        val a = values(rs1)
+        val b = values(rs2)
+        val taken = funct3 match {
+          case 0 => a == b
+          case 1 => a != b
+          case 4 => signed(a) < signed(b)
+          case 5 => signed(a) >= signed(b)
+          case 6 => a < b
+          case 7 => a >= b
+          case _ => false
+        }
+        drive(dut, bType(rs1, rs2, 16, funct3), pc = 0x100)
+        dut.io.PCSrc.expect(taken.B)
+        dut.io.MemWrite.expect(false.B)
+        dut.io.WriteData.expect(b.U)
+        // Invalid branches have all controls zero, selecting register addition.
+        dut.io.IEUAdr.expect((if (funct3 == 2 || funct3 == 3) u32(a + b) else BigInt(0x110)).U)
+        dut.clock.step()
+      }
+      for ((address, value) <- values) expectRegister(dut, address, value)
     }
   }
 

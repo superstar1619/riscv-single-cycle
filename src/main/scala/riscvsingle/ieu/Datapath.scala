@@ -1,7 +1,6 @@
 package riscvsingle.ieu
 
 import chisel3._
-import chisel3.util.Cat
 import riscvsingle.config.CpuConfig
 
 /** Control, instruction, and memory interfaces from Code Example 2.15. */
@@ -11,9 +10,11 @@ final class DatapathIO(config: CpuConfig) extends Bundle {
   val ResultSrc = Input(Bool())
   val ALUSrc = Input(UInt(2.W))
   val RegWrite = Input(Bool())
-  val ImmSrc = Input(UInt(2.W))
+  val ImmSrc = Input(UInt(3.W))
   val ALUControl = Input(UInt(2.W))
   val Eq = Output(Bool())
+  val LT = Output(Bool())
+  val LTU = Output(Bool())
   val PC = Input(UInt(config.xlen.W))
   val PCPlus4 = Input(UInt(config.xlen.W))
   val Instr = Input(UInt(32.W))
@@ -56,13 +57,14 @@ final class Datapath(val config: CpuConfig = CpuConfig()) extends RawModule {
   R2 := rf.io.RD2
 
   ext.io.Instr := io.Instr(31, 7)
-  // This round preserves the existing four-format controller/datapath interface.
-  ext.io.ImmSrc := Cat(0.U(1.W), io.ImmSrc)
+  ext.io.ImmSrc := io.ImmSrc
   ImmExt := ext.io.ImmExt
 
   cmp.io.R1 := R1
   cmp.io.R2 := R2
   io.Eq := cmp.io.Eq
+  io.LT := cmp.io.LT
+  io.LTU := cmp.io.LTU
 
   SrcA := Mux(io.ALUSrc(1), io.PC, R1)
   SrcB := Mux(io.ALUSrc(0), ImmExt, R2)

@@ -26,10 +26,12 @@ final class IEU(val config: CpuConfig = CpuConfig()) extends RawModule {
 
   val RegWrite = Wire(Bool())
   val Eq = Wire(Bool())
+  val LT = Wire(Bool())
+  val LTU = Wire(Bool())
   val ALUResultSrc = Wire(Bool())
   val ResultSrc = Wire(Bool())
   val ALUSrc = Wire(UInt(2.W))
-  val ImmSrc = Wire(UInt(2.W))
+  val ImmSrc = Wire(UInt(3.W))
   val ALUControl = Wire(UInt(2.W))
 
   val c = Module(new Controller)
@@ -37,8 +39,10 @@ final class IEU(val config: CpuConfig = CpuConfig()) extends RawModule {
 
   c.io.Op := io.Instr(6, 0)
   c.io.Funct3 := io.Instr(14, 12)
-  c.io.Funct7b5 := io.Instr(30)
+  c.io.Funct7 := io.Instr(31, 25)
   c.io.Eq := Eq
+  c.io.LT := LT
+  c.io.LTU := LTU
   ALUResultSrc := c.io.ALUResultSrc
   ResultSrc := c.io.ResultSrc
   ALUSrc := c.io.ALUSrc
@@ -58,6 +62,8 @@ final class IEU(val config: CpuConfig = CpuConfig()) extends RawModule {
   dp.io.ImmSrc := ImmSrc
   dp.io.ALUControl := ALUControl
   Eq := dp.io.Eq
+  LT := dp.io.LT
+  LTU := dp.io.LTU
   dp.io.PC := io.PC
   dp.io.PCPlus4 := io.PCPlus4
   dp.io.Instr := io.Instr
