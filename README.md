@@ -4,7 +4,9 @@
 
 ## 当前交付
 
-**第七章第 4 轮：Shifter。** 新增教材漏斗移位模块，支持 SLL/SRL/SRA，保留 `A/Amt/Right/SubArith/Y` 接口；独立模块验证 32/64 位。本轮暂不接入 ALU，整机仍执行既有简化指令子集。参数、源字与偏移结构、验证和 RTL 路径见 [Shifter 核验报告](docs/modules/12-shifter.md)。**本轮停止，等待用户核验；明确通过并允许继续后才进入 ALU。**
+**第七章第 5 轮：ALU。** 补齐 XOR、SLTU、SLL、SRL、SRA 并接入教材漏斗 Shifter；保留六个原有端口和 `ALUControl={SubArith,ALUOp}`，`IEUAdr` 始终输出加减器结果。完整指令译码留待 Controller 轮次，整机继续验证既有合法程序。参数、控制编码、内部信号、测试和 RTL 路径见 [ALU 核验报告](docs/modules/03-alu.md)。**本轮停止，等待用户核验；明确通过并允许继续后才进入 Controller。**
+
+第 4 轮 Shifter 已核验并按用户指示提交为 `d9d7861`：教材漏斗结构支持 SLL/SRL/SRA，独立模块验证 32/64 位，详见 [Shifter 核验报告](docs/modules/12-shifter.md)。本轮 ALU 接入该模块。
 
 第 3 轮 RegFile 已核验并按用户指示提交为 `96576f0`：核对教材要求后保留既有硬件，补充全部非零寄存器复位保值、写入抑制和无时钟沿脉冲验证，详见 [RegFile 核验报告](docs/modules/04-regfile.md)。
 

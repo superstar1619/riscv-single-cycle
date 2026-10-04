@@ -226,7 +226,7 @@ class IEUSpec extends AnyFlatSpec with ChiselScalatestTester {
       "io_MemWrite" -> ("output", 1), "io_IEUAdr" -> ("output", 32),
       "io_WriteData" -> ("output", 32), "io_ReadData" -> ("input", 32)))
     val modules = "(?m)^module (\\w+)\\(".r.findAllMatchIn(verilog).map(_.group(1)).toSet
-    assert(modules == Set("IEU", "Controller", "Datapath", "RegFile", "Extend", "Cmp", "ALU"))
+    assert(modules == Set("IEU", "Controller", "Datapath", "RegFile", "Extend", "Cmp", "ALU", "Shifter"))
     assert(verilog.contains("Controller c ("), "IEU must contain Controller instance c")
     assert(verilog.contains("Datapath dp ("), "IEU must contain Datapath instance dp")
   }

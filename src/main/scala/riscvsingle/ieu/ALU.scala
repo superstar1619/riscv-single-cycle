@@ -1,7 +1,7 @@
 package riscvsingle.ieu
 
 import chisel3._
-import chisel3.util.{Fill, MuxLookup}
+import chisel3.util.{Cat, Fill, MuxLookup, log2Ceil}
 
 /** Book-compatible ALU operands, controls, and separate address/result outputs. */
 final class ALUIO(dataWidth: Int) extends Bundle {
@@ -13,9 +13,9 @@ final class ALUIO(dataWidth: Int) extends Bundle {
   val IEUAdr = Output(UInt(dataWidth.W))
 }
 
-/** Combinational add/sub/signed-slt/or/and ALU, Code Example 2.15, pp. 64-65.
-  * ALUControl = {Sub, ALUOp}. The controller must enable Sub for signed slt.
-  * Unsupported effective function codes produce zero instead of the book's x.
+/** Combinational integer ALU, Chapter 7, Sections 7.1.3.1/.2/.4, pp. 304-308.
+  * ALUControl = {SubArith, ALUOp}. The controller enables SubArith for
+  * subtraction, signed/unsigned comparisons, and arithmetic right shifts.
   */
 final class ALU(val dataWidth: Int = 32) extends RawModule {
   require(dataWidth > 0, "ALU dataWidth must be > 0")
@@ -23,19 +23,26 @@ final class ALU(val dataWidth: Int = 32) extends RawModule {
   val io = IO(new ALUIO(dataWidth))
 
   val ALUOp = Wire(Bool())
-  val Sub = Wire(Bool())
+  val SubArith = Wire(Bool())
   val CondInvb = Wire(UInt(dataWidth.W))
+  val SumExt = Wire(UInt((dataWidth + 1).W))
+  val Carry = Wire(Bool())
   val Sum = Wire(UInt(dataWidth.W))
   val Overflow = Wire(Bool())
   val Neg = Wire(Bool())
   val LT = Wire(Bool())
+  val LTU = Wire(Bool())
   val SLT = Wire(UInt(dataWidth.W))
-  val ALUFunct = Wire(UInt(3.W))
+  val SLTU = Wire(UInt(dataWidth.W))
+  val ShiftResult = Wire(UInt(dataWidth.W))
+  val ALUSelect = Wire(UInt(3.W))
 
   ALUOp := io.ALUControl(0)
-  Sub := io.ALUControl(1)
-  CondInvb := Mux(Sub, ~io.SrcB, io.SrcB)
-  Sum := io.SrcA + CondInvb + Sub.asUInt
+  SubArith := io.ALUControl(1)
+  CondInvb := Mux(SubArith, ~io.SrcB, io.SrcB)
+  SumExt := (io.SrcA +& CondInvb) + SubArith.asUInt
+  Carry := SumExt(dataWidth)
+  Sum := SumExt(dataWidth - 1, 0)
   io.IEUAdr := Sum
 
   // The book's subtraction overflow correction supports signed slt even
@@ -44,14 +51,32 @@ final class ALU(val dataWidth: Int = 32) extends RawModule {
     (io.SrcA(dataWidth - 1) ^ Sum(dataWidth - 1))
   Neg := Sum(dataWidth - 1)
   LT := Neg ^ Overflow
+  LTU := !Carry
   SLT := Mux(LT, 1.U(dataWidth.W), 0.U(dataWidth.W))
+  SLTU := Mux(LTU, 1.U(dataWidth.W), 0.U(dataWidth.W))
+
+  // Preserve the ALU's positive-width parameter contract while reusing the
+  // power-of-two Shifter. Padding does not change the low dataWidth result.
+  private val shiftWidth = 1 << math.max(1, log2Ceil(dataWidth))
+  val shifter = Module(new Shifter(shiftWidth))
+  shifter.io.A := (if (shiftWidth == dataWidth) io.SrcA
+    else Cat(Fill(shiftWidth - dataWidth, io.SrcA(dataWidth - 1) && SubArith), io.SrcA))
+  shifter.io.Amt := (if (dataWidth == 1) 0.U(1.W)
+    else io.SrcB(log2Ceil(dataWidth) - 1, 0))
+  shifter.io.Right := io.Funct3(2)
+  shifter.io.SubArith := SubArith
+  ShiftResult := shifter.io.Y(dataWidth - 1, 0)
 
   // Loads/stores/branches/jal force addition independently of Funct3 when
-  // their controller sets ALUOp=0 and Sub=0.
-  ALUFunct := io.Funct3 & Fill(3, ALUOp)
-  io.ALUResult := MuxLookup(ALUFunct, 0.U(dataWidth.W))(Seq(
+  // their controller sets ALUOp=0 and SubArith=0.
+  ALUSelect := io.Funct3 & Fill(3, ALUOp)
+  io.ALUResult := MuxLookup(ALUSelect, 0.U(dataWidth.W))(Seq(
     0.U -> Sum,
+    1.U -> ShiftResult,
     2.U -> SLT,
+    3.U -> SLTU,
+    4.U -> (io.SrcA ^ io.SrcB),
+    5.U -> ShiftResult,
     6.U -> (io.SrcA | io.SrcB),
     7.U -> (io.SrcA & io.SrcB)
   ))

@@ -221,7 +221,8 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
         val selection = random.nextInt(4)
         val funct3 = random.nextInt(8)
         val aluOp = random.nextBoolean()
-        val sub = aluOp && (funct3 == 2 || (funct3 == 0 && random.nextBoolean()))
+        val sub = aluOp && (funct3 == 2 || funct3 == 3 ||
+          ((funct3 == 0 || funct3 == 5) && random.nextBoolean()))
         val pc = BigInt(32, random)
         val linkAddress = BigInt(32, random)
         val readData = BigInt(32, random)
@@ -233,10 +234,13 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
         val address = u32(if (sub) a - b else a + b)
         val result = (if (aluOp) funct3 else 0) match {
           case 0 => address
+          case 1 => u32(a << (b & 31).toInt)
           case 2 => if (signed(a, 32) < signed(b, 32)) BigInt(1) else BigInt(0)
+          case 3 => if (a < b) BigInt(1) else BigInt(0)
+          case 4 => a ^ b
+          case 5 => u32(if (sub) signed(a, 32) >> (b & 31).toInt else a >> (b & 31).toInt)
           case 6 => a | b
           case 7 => a & b
-          case _ => BigInt(0)
         }
         dut.io.Instr.poke(instruction.U)
         dut.io.ImmSrc.poke(format.U)

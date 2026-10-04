@@ -121,7 +121,7 @@ class RiscvSingleSpec extends AnyFlatSpec with ChiselScalatestTester {
         "io_MemWrite" -> ("output", 1)))
       val modules = "(?m)^module (\\w+)\\(".r.findAllMatchIn(verilog).map(_.group(1)).toSet
       assert(modules == Set("RiscvSingle", "IFU", "IEU", "LSU", "IROM",
-        "Controller", "Datapath", "RegFile", "Extend", "Cmp", "ALU"))
+        "Controller", "Datapath", "RegFile", "Extend", "Cmp", "ALU", "Shifter"))
       for ((module, instance) <- Seq("IFU" -> "ifu", "IEU" -> "ieu", "LSU" -> "lsu")) {
         assert(verilog.contains(s"$module $instance ("), s"Missing child $instance")
       }
