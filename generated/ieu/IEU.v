@@ -526,11 +526,11 @@ module Extend(
   assign io_ImmExt = 3'h4 == io_ImmSrc ? ImmU : _io_ImmExt_T_7; // @[src/main/scala/riscvsingle/ieu/Extend.scala 40:56]
 endmodule
 module Cmp(
-  input  [31:0] io_R1, // @[src/main/scala/riscvsingle/ieu/Cmp.scala 19:14]
-  input  [31:0] io_R2, // @[src/main/scala/riscvsingle/ieu/Cmp.scala 19:14]
-  output        io_Eq // @[src/main/scala/riscvsingle/ieu/Cmp.scala 19:14]
+  input  [31:0] io_R1, // @[src/main/scala/riscvsingle/ieu/Cmp.scala 22:14]
+  input  [31:0] io_R2, // @[src/main/scala/riscvsingle/ieu/Cmp.scala 22:14]
+  output        io_Eq // @[src/main/scala/riscvsingle/ieu/Cmp.scala 22:14]
 );
-  assign io_Eq = io_R1 == io_R2; // @[src/main/scala/riscvsingle/ieu/Cmp.scala 22:21]
+  assign io_Eq = io_R1 == io_R2; // @[src/main/scala/riscvsingle/ieu/Cmp.scala 35:21]
 endmodule
 module ALU(
   input  [31:0] io_SrcA, // @[src/main/scala/riscvsingle/ieu/ALU.scala 23:14]
