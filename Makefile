@@ -30,6 +30,28 @@ WAVE_DIR ?= target/waveforms
   generate-irom generate-ifu generate-lsu generate-cpu test test-rtl test-wave \
   test-subwordwrite-wave test-subwordread-wave test-dtim-wave test-lsu-wave clean
 
+.PHONY: build-acceptance generate-acceptance test-acceptance test-final-waves
+
+build-acceptance:
+	python3 scripts/build-rv32-acceptance.py
+
+generate-acceptance:
+	$(SBT) "runMain riscvsingle.GenerateRiscvSingle 128 64 generated/rv32-acceptance programs/rv32-acceptance.memfile 0" "runMain riscvsingle.GenerateRiscvSingle 256 128 generated/rv32-acceptance-expanded programs/rv32-acceptance-expanded.memfile 0x100"
+
+test-acceptance:
+	$(SBT) 'testOnly riscvsingle.CpuAcceptanceSpec riscvsingle.CpuResetSpec'
+
+# 全部模块完成后运行一次；所有 VCD 的观察时钟只存在于测试包装层。
+test-final-waves:
+	GENERATE_WAVES=1 $(SBT) 'testOnly riscvsingle.CpuAcceptanceSpec' 'testOnly riscvsingle.ifu.IROMSpec -- -z "retain loaded"' 'testOnly riscvsingle.ifu.IFUSpec -- -z "sample selected targets"'
+	mkdir -p "$(WAVE_DIR)"
+	cp test_run_dir/RiscvSingle_acceptance_should_execute_complete_RV32_acceptance_at_reset_vector_0/CpuAcceptanceHarness.vcd "$(WAVE_DIR)/rv32-acceptance.vcd"
+	cp test_run_dir/RiscvSingle_acceptance_should_execute_complete_RV32_acceptance_at_reset_vector_256/CpuAcceptanceHarness.vcd "$(WAVE_DIR)/rv32-acceptance-expanded.vcd"
+	cp test_run_dir/IROM_should_retain_loaded_instructions_through_wrapper_reset_clock_edges/IROMHarness.vcd "$(WAVE_DIR)/irom32.vcd"
+	cp test_run_dir/IFU_should_sample_selected_targets_without_masking_address_bits_and_wrap_PCPlus4_to_32_bits/IFUHarness.vcd "$(WAVE_DIR)/ifu32.vcd"
+	$(MAKE) test-wave test-subwordwrite-wave test-subwordread-wave test-dtim-wave test-lsu-wave SBT="$(SBT)" WAVE_DIR="$(WAVE_DIR)"
+	python3 scripts/check-final-waves.py "$(WAVE_DIR)"
+
 generate:
 	$(SBT) "runMain riscvsingle.GenerateExtend $(WIDTH) $(TARGET_DIR)"
 

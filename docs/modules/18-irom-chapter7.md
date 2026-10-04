@@ -46,3 +46,8 @@ make generate-irom SBT=./scripts/sbt-local.sh IMEM_DEPTH=128 IROM_TARGET_DIR=gen
 日志：`target/chapter7-final/irom-{focused,regression,generate}.log`。
 由于硬件已符合要求，新增验证直接通过；本轮未引入功能变更，不人为制造失败。
 按用户最新指令，测试通过后提交并进入 IFU；波形统一留到全部模块完成后生成和核对。
+
+
+最终第 16 轮统一生成并核对了本模块波形：`target/waveforms/irom32.vcd`、
+`waves/irom32.gtkw`；命令 `make test-final-waves SBT=./scripts/sbt-local.sh`。
+结果及其他最终波形见 [整机验收报告](20-riscv-single-chapter7.md)。

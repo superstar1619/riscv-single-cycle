@@ -199,7 +199,7 @@ class LSUSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "emit seven RV32 ports and parameterized byte RAM with clock-edge writes" in {
+  it should "emit eight RV32 ports and parameterized byte RAM with clock-edge writes" in {
     for (depth <- Seq(64, 128)) {
       val targetDir = Files.createTempDirectory("lsu-interface-")
       val verilog = (new ChiselStage).emitVerilog(new LSU(CpuConfig(dmemDepth = depth)),
@@ -213,7 +213,7 @@ class LSUSpec extends AnyFlatSpec with ChiselScalatestTester {
       assert(ports == Map("clk" -> ("input", 1), "io_MemWrite" -> ("input", 1),
         "io_MemRW" -> ("input", 2), "io_Funct3" -> ("input", 3),
         "io_IEUAdr" -> ("input", 32), "io_WriteData" -> ("input", 32),
-        "io_ReadData" -> ("output", 32)))
+        "io_ReadData" -> ("output", 32), "io_ByteMask" -> ("output", 4)))
       val memories = s"reg \\[7:0\\] RAM_\\d+ \\[0:${depth - 1}\\];".r
       assert(memories.findAllIn(verilog).size == 4, "Four byte lanes must follow depth")
       val modules = "(?m)^module (\\w+)\\(".r.findAllMatchIn(verilog).map(_.group(1)).toSet

@@ -53,3 +53,8 @@ make generate-ifu SBT=./scripts/sbt-local.sh IMEM_DEPTH=128 IFU_TARGET_DIR=gener
 日志：`target/chapter7-final/ifu-{focused,regression,generate}.log`。
 硬件没有新增行为，新增核验直接通过；没有人为制造失败。
 按最新用户指令，测试通过后提交并进入 RiscvSingle，波形在全部模块完成后统一生成/核对。
+
+
+最终第 16 轮统一生成并核对了本模块波形：`target/waveforms/ifu32.vcd`、
+`waves/ifu32.gtkw`；命令 `make test-final-waves SBT=./scripts/sbt-local.sh`。
+结果及其他最终波形见 [整机验收报告](20-riscv-single-chapter7.md)。

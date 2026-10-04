@@ -4,13 +4,13 @@
 
 ## 当前交付
 
-**第七章第 15 轮：IFU 核验完成。** PC 模型覆盖三种容量/复位配置共900周期；模块9/9、全工程184/184通过。见 [IFU 第七章报告](docs/modules/19-ifu-chapter7.md)。IROM已提交为 `5cbc622`；继续完成CPU观察接口、复位写入屏蔽与完整RV32验收，最后统一生成/核对波形。
+**第七章 16/16 轮全部完成。** CPU 接通完整 RV32 子字访存，新增 MemRW/Funct3/有效 ByteMask 观察口，复位期间屏蔽访存和正常寄存器写入。全工程 188/188、四种配置共 12 次 RTL 仿真通过；全部 37 类教材指令、六种分支双向、33 个固定签名及 12 份最终波形均已核对。见 [整机验收报告](docs/modules/20-riscv-single-chapter7.md)。
 
-第 11–13 轮 SubwordRead、DTIM、LSU 已补提交为 `f826665`。RV32 子字数据路径已连接，最终整机验收与复位写入屏蔽正在后续轮完成。
+第 11–13 轮已提交 `f826665`，IROM 已提交 `5cbc622`，IFU 已提交 `a212288`。第 16 轮验收、波形和报告纳入本轮提交，提交号见 git log；只提交本地，不合并或推送。
 
 第 9 轮 SwByteMask、第 10 轮 SubwordWrite 及可读性更新已按用户要求提交为 `886e708`。SwByteMask 是教材图 7.9 和后续 LSU/DTIM 所需的字节写使能模块，保留交付。
 
-后续恢复执行请先读 [第七章进度与后续执行报告](docs/chapter7-progress.md)：记录当前交付、接口和剩余验收；用户最新要求是逐轮测试后提交、最后统一核对波形。
+后续恢复执行请先读 [第七章进度与后续执行报告](docs/chapter7-progress.md)：记录完成表、当前接口和验收证据；用户要求的逐轮提交和最终波形核对已落实。
 
 第 8 轮 IEU 已提交为 `89b1e58`：导出 `MemRW={MemRead,MemWrite}` 与原始 `Funct3`，独立验证全部 37 类 RV32 指令；加载数据由外部提供，详见 [IEU 核验报告](docs/modules/07-ieu.md)。
 
@@ -49,7 +49,7 @@
 | IROM | [第七章](docs/modules/18-irom-chapter7.md)、[第二章历史](docs/modules/08-irom.md) | [IROM.scala](src/main/scala/riscvsingle/ifu/IROM.scala) | [IROMSpec.scala](src/test/scala/riscvsingle/ifu/IROMSpec.scala) | [64 项](generated/irom/IROM.v)、[128 项](generated/irom128/IROM.v) |
 | IFU | [第七章](docs/modules/19-ifu-chapter7.md)、[第二章历史](docs/modules/09-ifu.md) | [IFU.scala](src/main/scala/riscvsingle/ifu/IFU.scala) | [IFUSpec.scala](src/test/scala/riscvsingle/ifu/IFUSpec.scala) | [默认](generated/ifu/IFU.v)、[128 项、复位地址 0x100](generated/ifu128/IFU.v) |
 | LSU | [第七章](docs/modules/17-lsu-chapter7.md)、[第二章历史](docs/modules/10-lsu.md) | [LSU.scala](src/main/scala/riscvsingle/lsu/LSU.scala) | [字访存](src/test/scala/riscvsingle/lsu/LSUSpec.scala)、[子字访存](src/test/scala/riscvsingle/lsu/LSUSubwordSpec.scala) | [64 项](generated/lsu/LSU.v)、[128 项](generated/lsu128/LSU.v) |
-| RiscvSingle | [11-riscv-single.md](docs/modules/11-riscv-single.md) | [RiscvSingle.scala](src/main/scala/riscvsingle/RiscvSingle.scala) | [RiscvSingleSpec.scala](src/test/scala/riscvsingle/RiscvSingleSpec.scala) | [默认 CPU](generated/riscv-single/RiscvSingle.v)、[128 项、复位地址 0x100](generated/riscv-single128/RiscvSingle.v) |
+| RiscvSingle | [第七章验收](docs/modules/20-riscv-single-chapter7.md)、[第二章历史](docs/modules/11-riscv-single.md) | [RiscvSingle.scala](src/main/scala/riscvsingle/RiscvSingle.scala) | [RiscvSingleSpec.scala](src/test/scala/riscvsingle/RiscvSingleSpec.scala) | [默认 CPU](generated/riscv-single/RiscvSingle.v)、[128 项、复位地址 0x100](generated/riscv-single128/RiscvSingle.v) |
 
 [统一配置](src/main/scala/riscvsingle/config/CpuConfig.scala) 提供 CPU 结构参数。Extend、Cmp、ALU、RegFile 可单独配置数据位宽，RegFile 还可配置寄存器数量；Shifter 位宽须为不小于 2 的二次幂，默认 32。Controller 的端口位宽遵循固定的 RISC-V 指令字段和控制编码。Datapath、IEU 接受 `CpuConfig`，将 `xlen` 传递给端口与子模块，当前限定为 RV32 和 32 项寄存器。
 
@@ -61,9 +61,9 @@ IFU 接受统一配置，用 `resetVector` 设置 PC 的复位字节地址，并
 
 LSU 以 `dmemDepth` 配置 32 位数据字数量，按 MemRW/Funct3 进行子字读取和写入；实际存储要求兼容 MemWrite 与 MemRW[0] 同时有效。组合读、上升沿按掩码写，非法或未对齐读零、不写；容量外高位回绕。RAM 无复位或初始化，首次写入前的字节内容未指定。
 
-RiscvSingle 接入同一 `CpuConfig` 并连接 IFU、IEU、LSU，保留书中的 clk/reset 输入及 WriteData/IEUAdr/MemWrite 输出。生产顶层已执行书中程序，确认地址 96 写入 7、地址 100 写入 25。全项目 12 个套件、74 项测试通过。
+RiscvSingle 接入同一 `CpuConfig` 并连接 IFU、IEU、LSU，共 8 个生产观察端口：clk/reset、WriteData/IEUAdr/MemWrite、MemRW/Funct3/ByteMask。MemWrite 和 ByteMask 表示实际允许的写入；reset 有效时访存请求关闭，PC/RF 保持同步复位，RAM 内容保留。原程序的地址 96=7、100=25 保持；全工程 20 个套件、188 项测试通过。
 
-**预定的 11 个硬件模块均已实现并提交。** 后续补充的生成 RTL 整机验证已通过：Verilator 直接编译默认及 128 项配置，各使用三个随机初值种子，共六次运行通过。检查逐周期地址、存储事务、结束循环与同步复位；详见 [RTL 整机验证报告](docs/12-rtl-validation.md)。验证脚本、测试与报告已提交为 `b983c22`。
+**第二章历史：11 个硬件模块均已实现并提交。** 当时生成 RTL 整机验证通过：Verilator 直接编译默认及 128 项配置，各使用三个随机初值种子，共六次运行通过。检查逐周期地址、存储事务、结束循环与同步复位；详见 [第二章 RTL 验证历史](docs/12-rtl-validation.md)。第七章当前验证为四种配置、12 次 PASS，见整机验收报告。
 
 **第二章项目已完成收尾。** 当时的实现范围、模块交付、参数、用户核验要求、验证结果及复现方式见 [项目总结报告](docs/project-summary.md)；第七章的当前进度以本 README 和各模块更新报告为准。
 
@@ -149,17 +149,30 @@ make generate-cpu SBT=./scripts/sbt-local.sh IMEM_DEPTH=128 DMEM_DEPTH=128 CPU_T
 
 `sbt run` 默认生成 Extend。也可以使用 `runMain` 指定 `riscvsingle.GenerateExtend`、`riscvsingle.GenerateCmp`、`riscvsingle.GenerateShifter`、`riscvsingle.GenerateALU`、`riscvsingle.GenerateRegFile`、`riscvsingle.GenerateController`、`riscvsingle.GenerateDatapath` 或 `riscvsingle.GenerateIEU`。例如 `sbt "runMain riscvsingle.GenerateRegFile 64 generated/regfile64 32"`；RegFile 的第三个可选参数为寄存器数量，Makefile 对应 `REGISTER_COUNT`，默认 32。Shifter 使用 `sbt "runMain riscvsingle.GenerateShifter 64 generated/shifter64"`，两个可选参数依次为位宽和输出目录，Makefile 对应 `WIDTH` 和 `SHIFTER_TARGET_DIR`。Controller、Datapath、IEU 各自接受一个可选的输出目录参数，如 `sbt "runMain riscvsingle.GenerateIEU generated/ieu"`，Makefile 对应 `IEU_TARGET_DIR`。`make clean` 调用 `sbt clean`，保留已生成的 Verilog 和模块报告。
 
-IROM 使用 `sbt "runMain riscvsingle.GenerateIROM 64 generated/irom programs/riscvtest.memfile"`。三个可选参数依次为深度、输出目录、初始化文件，Makefile 分别对应 `IMEM_DEPTH`、`IROM_TARGET_DIR`、`INSTRUCTION_INIT_FILE`；将文件设为 `-` 表示不初始化。相对文件路径以仿真运行目录为基准；在项目根目录运行可直接使用默认镜像。默认镜像为 64 项，128 项生成示例的后 64 项未初始化；如需读取全部条目，提供与深度匹配的镜像。
+IROM 使用 `sbt "runMain riscvsingle.GenerateIROM 64 generated/irom programs/riscvtest.memfile"`。三个可选参数依次为深度、输出目录、初始化文件，Makefile 分别对应 `IMEM_DEPTH`、`IROM_TARGET_DIR`、`INSTRUCTION_INIT_FILE`；将文件设为 `-` 表示不初始化。相对文件路径以仿真运行目录为基准；在项目根目录运行可直接使用默认镜像。默认镜像为 64 项；已交付的 128 项 RTL 使用完整 rv32-configtest.memfile。自定义镜像应覆盖所需条目。
 
-IFU 使用 `sbt "runMain riscvsingle.GenerateIFU 64 generated/ifu programs/riscvtest.memfile 0"`。四个可选参数依次为深度、输出目录、初始化文件、复位字节地址，Makefile 对应 `IMEM_DEPTH`、`IFU_TARGET_DIR`、`INSTRUCTION_INIT_FILE`、`RESET_VECTOR`。复位地址支持十进制和 `0x`/`0X` 十六进制。128 项、复位地址 0x100 的生成示例用于展示配置；默认镜像在该地址没有初始化指令，运行时需提供覆盖该地址的镜像。
+IFU 使用 `sbt "runMain riscvsingle.GenerateIFU 64 generated/ifu programs/riscvtest.memfile 0"`。四个可选参数依次为深度、输出目录、初始化文件、复位字节地址，Makefile 对应 `IMEM_DEPTH`、`IFU_TARGET_DIR`、`INSTRUCTION_INIT_FILE`、`RESET_VECTOR`。复位地址支持十进制和 `0x`/`0X` 十六进制。已交付的 128 项、复位地址 0x100 的 RTL 使用完整配置测试镜像。
 
 LSU 使用 `sbt "runMain riscvsingle.GenerateLSU 64 generated/lsu"`。两个可选参数依次为数据字深度、输出目录，Makefile 对应 `DMEM_DEPTH`、`LSU_TARGET_DIR`，仍限定 RV32。LSU 联调测试在程序运行后通过合法 LW 探针确认地址 100 保存 25；另用独立字节模型和 IEU 写回签名验证子字访存。
 
 完整 CPU 使用 `sbt "runMain riscvsingle.GenerateRiscvSingle 64 64 generated/riscv-single programs/riscvtest.memfile 0"`。五个可选参数依次为指令深度、数据深度、输出目录、初始化文件、复位字节地址，分别对应 Makefile 的 `IMEM_DEPTH`、`DMEM_DEPTH`、`CPU_TARGET_DIR`、`INSTRUCTION_INIT_FILE`、`RESET_VECTOR`。文件参数 `-` 表示不初始化指令内容；复位地址支持十进制和 `0x`/`0X` 十六进制。默认生成加载书中程序镜像。
 
-128 项 CPU 示例使用完整的 [配置测试镜像](programs/rv32-configtest.memfile)，从 0x100 执行测试程序，验证 RAM 字 127 与字 63 独立、负偏移加载、jal 跳转与链接值。第 13 轮将该镜像的 SW 改为对齐的实际地址 508。单独验证整机可执行 `./scripts/sbt-local.sh 'testOnly riscvsingle.RiscvSingleSpec'`。当前 IEU 支持表 7.1 的 RV32 指令译码与执行，LSU 子字通路已接入；完整整机签名、额外观察端口和复位期间写入屏蔽留待第 16 轮。异常、CSR 和外部总线接口不在本阶段范围；程序文件加载仍属于仿真初始化，FPGA/ASIC 程序固化尚未实现。
+128 项 CPU 示例使用完整的 [配置测试镜像](programs/rv32-configtest.memfile)，从 0x100 执行测试程序，验证 RAM 字 127 与字 63 独立、负偏移加载、jal 跳转与链接值。第 13 轮将该镜像的 SW 改为对齐的实际地址 508。单独验证整机可执行 `./scripts/sbt-local.sh 'testOnly riscvsingle.RiscvSingleSpec'`。当前 IEU 支持表 7.1 的 RV32 指令译码与执行，LSU 子字通路已接入；第 16 轮已完成完整整机签名、额外观察端口和复位期间写入屏蔽。异常、CSR 和外部总线接口不在本阶段范围；程序文件加载仍属于仿真初始化，FPGA/ASIC 程序固化尚未实现。
 
-`make test-rtl` 使用 Verilator 和 C++17 编译器直接验证两份现有完整 CPU Verilog，测试仅通过五个生产顶层端口进行。可用 `make test-rtl VERILATOR=/path/to/verilator` 指定工具。脚本自动切换到项目根目录以加载镜像，将编译产物及日志放入 `target/rtl-test/{book,expanded}`，ccache 写入 `.cache/ccache`。修改 Chisel 后先执行上述两个 `generate-cpu` 命令，更新两份 RTL，再运行 `test-rtl`；该目标本身不重新生成硬件。
+`make test-rtl` 使用 Verilator/C++17 直接验证四份完整 CPU RTL，每种配置三个随机初值种子。测试使用生产观察端口；日志位于 `target/rtl-test/{book,expanded,acceptance,acceptance-expanded}`。该目标不重新生成硬件；硬件改动后先生成对应 RTL。新验收程序使用 GNU RISC-V 工具链，可通过 RISCV_TOOL_PREFIX 指定前缀。
+
+完整验收与最终波形复现：
+
+```bash
+make build-acceptance
+make generate-acceptance SBT=./scripts/sbt-local.sh
+make test-acceptance SBT=./scripts/sbt-local.sh
+make test-rtl
+make test-final-waves SBT=./scripts/sbt-local.sh
+gtkwave target/waveforms/rv32-acceptance.vcd waves/rv32-acceptance.gtkw
+```
+
+汇编：[rv32-acceptance.s](programs/rv32-acceptance.s)；机器码：[复位 0](programs/rv32-acceptance.memfile)、[复位 0x100](programs/rv32-acceptance-expanded.memfile)；RTL：[128/64 项](generated/rv32-acceptance/RiscvSingle.v)、[256/128 项](generated/rv32-acceptance-expanded/RiscvSingle.v)。最终波形命令生成并自动核对 12 份 VCD 和 GTKWave 信号路径。
 
 SubwordWrite 模块测试：`./scripts/sbt-local.sh 'testOnly riscvsingle.lsu.SubwordWriteSpec'`。一条命令生成两个宽度的 VCD：
 

@@ -160,7 +160,11 @@ class IROMSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   it should "retain loaded instructions through wrapper reset clock edges" in {
-    test(new IROMHarness(CpuConfig(instructionInitFile = Some(bookFile)))) { dut =>
+    val waves = if (sys.env.get("GENERATE_WAVES").contains("1")) {
+      Seq(WriteVcdAnnotation)
+    } else Seq.empty
+    test(new IROMHarness(CpuConfig(instructionInitFile = Some(bookFile))))
+      .withAnnotations(waves) { dut =>
       dut.io.a.poke(0.U)
       dut.io.rd.expect("h00500113".U)
       dut.reset.poke(true.B)

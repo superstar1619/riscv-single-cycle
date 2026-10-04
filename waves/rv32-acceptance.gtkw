@@ -1,0 +1,24 @@
+[timestart] 0
+[size] 1500 850
+[signals_width] 300
+[zoom] -5.0
+@28
+CpuAcceptanceHarness.clock
+CpuAcceptanceHarness.reset
+@22
+CpuAcceptanceHarness.dut.PC
+CpuAcceptanceHarness.dut.Instr
+CpuAcceptanceHarness.dut.PCPlus4
+@28
+CpuAcceptanceHarness.dut.PCSrc
+CpuAcceptanceHarness.io_MemRW
+CpuAcceptanceHarness.io_Funct3
+CpuAcceptanceHarness.io_MemWrite
+@22
+CpuAcceptanceHarness.io_IEUAdr
+CpuAcceptanceHarness.io_WriteData
+CpuAcceptanceHarness.io_ByteMask
+CpuAcceptanceHarness.dut.ReadData
+CpuAcceptanceHarness.dut.lsu.WriteDataWord
+CpuAcceptanceHarness.dut.lsu.ReadDataWord
+CpuAcceptanceHarness.dut.ieu.dp.Result

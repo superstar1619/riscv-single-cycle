@@ -107,7 +107,7 @@ class RiscvSingleSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should ("emit exactly the five book ports and the complete hierarchy " +
+  it should ("emit eight observation ports and the complete hierarchy " +
     "with synchronous state updates") in {
     for (config <- Seq(bookConfig, expandedConfig, CpuConfig())) {
       val targetDir = Files.createTempDirectory("cpu-interface-")
@@ -121,7 +121,8 @@ class RiscvSingleSpec extends AnyFlatSpec with ChiselScalatestTester {
       }.toMap
       assert(ports == Map("clk" -> ("input", 1), "reset" -> ("input", 1),
         "io_WriteData" -> ("output", 32), "io_IEUAdr" -> ("output", 32),
-        "io_MemWrite" -> ("output", 1)))
+        "io_MemWrite" -> ("output", 1), "io_MemRW" -> ("output", 2),
+        "io_Funct3" -> ("output", 3), "io_ByteMask" -> ("output", 4)))
       val modules = "(?m)^module (\\w+)\\(".r.findAllMatchIn(verilog).map(_.group(1)).toSet
       assert(modules == Set("RiscvSingle", "IFU", "IEU", "LSU", "IROM",
         "Controller", "Datapath", "RegFile", "Extend", "Cmp", "ALU", "Shifter",

@@ -80,7 +80,10 @@ class IFUSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   it should "sample selected targets without masking address bits and wrap PCPlus4 to 32 bits" in {
-    test(new IFUHarness(bookConfig)) { dut =>
+    val waves = if (sys.env.get("GENERATE_WAVES").contains("1")) {
+      Seq(WriteVcdAnnotation)
+    } else Seq.empty
+    test(new IFUHarness(bookConfig)).withAnnotations(waves) { dut =>
       dut.reset.poke(false.B)
       dut.io.PCSrc.poke(false.B)
       dut.io.IEUAdr.poke(0x18.U)

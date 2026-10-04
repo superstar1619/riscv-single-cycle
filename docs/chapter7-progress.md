@@ -4,7 +4,7 @@
 
 ## 1. 当前停点与提交定位
 
-**第七章 16 轮计划已交付前 15 轮；第 11–13 轮已补提交为 `f826665`，IROM 已提交 `5cbc622`，IFU 已核验，继续 CPU。** 执行单元已接通表 7.1 的 RV32 指令控制、运算、分支和跳转；四个访存模块已连接 LSU，CPU 补上 MemRW/Funct3 后接入子字数据路径。完整整机签名、额外观察接口和复位期间写入屏蔽仍待第 16 轮。
+**第七章 16/16 轮全部完成。** 第 11–13 轮提交 `f826665`，IROM 提交 `5cbc622`，IFU 提交 `a212288`。第 16 轮完成 8 端口 CPU、实际字节写掩码、复位写入屏蔽、全部 37 类 RV32 指令的整机验收；全工程 188/188、12 次 RTL 仿真及 12 份最终波形通过。详见 [整机验收报告](modules/20-riscv-single-chapter7.md)。
 
 第 8 轮 IEU 已提交为 `89b1e58`。此前按用户指令将第 9 轮 SwByteMask、第 10 轮 SubwordWrite 及可读性更新提交为 `886e708`，随后完成第 11 轮 SubwordRead、第 12 轮 DTIM。第 11–13 轮现已补提交为 `f826665`。用户 10-05 最新要求：后续每轮测试通过后 git commit，连续完成剩余模块；全部结束后统一生成/核对波形，不再逐轮等待波形检查。未合并或推送。
 
@@ -38,9 +38,9 @@ git diff -- docs/chapter7-progress.md
 | 11 | SubwordRead | 逐级小端子字选择与符号/零扩展；RV32 五种加载，独立 RV64 增 LD/LWU；非法编码输出零；两种宽度波形，第 13 轮接入 LSU。 | `f826665`；[15-subwordread.md](modules/15-subwordread.md) |
 | 12 | DTIM | 独立 32/64 位 RAM；组合读、上升沿逐字节掩码写；读取禁用输出零，无复位/初始化；容量回绕，第 13 轮接入 LSU。 | `f826665`；[16-dtim.md](modules/16-dtim.md) |
 | 13 | LSU | RV32 三种存储、五种加载，四模块连接；非法/未对齐读零、不写；双写使能、组合读/边沿写；CPU 必要接口适配、64/128 项 RTL 与波形。 | `f826665`；[17-lsu-chapter7.md](modules/17-lsu-chapter7.md) |
-| 14 | IROM | 保留组合取指、字节映射/容量回绕；补充完整扩容镜像边界与复位保持，8 项模块/181 项全工程通过。 | 见提交日志；[18-irom-chapter7.md](modules/18-irom-chapter7.md) |
-
-| 15 | IFU | 保留同步复位、PC+4、目标选择与组合取指；新增三组900周期参考，9项模块/184项全工程通过。 | 见提交日志；[19-ifu-chapter7.md](modules/19-ifu-chapter7.md) |
+| 14 | IROM | 保留组合取指、字节映射/容量回绕；补充完整扩容镜像边界与复位保持，8 项模块/181 项全工程通过。 | `5cbc622`；[18-irom-chapter7.md](modules/18-irom-chapter7.md) |
+| 15 | IFU | 保留同步复位、PC+4、目标选择与组合取指；新增三组900周期参考，9项模块/184项全工程通过。 | `a212288`；[19-ifu-chapter7.md](modules/19-ifu-chapter7.md) |
+| 16 | RiscvSingle | 8 观察端口、复位屏蔽、全部 37 类 RV32 整机验收；188 项、12 次 RTL、12 份最终波形通过。 | 见提交日志；[20-riscv-single-chapter7.md](modules/20-riscv-single-chapter7.md) |
 
 报告编号沿用既有模块目录，**不等于第七章执行轮次**：例如 Shifter 的报告是 `12-shifter.md`，其执行轮次为 4。新增模块应使用独立报告并更新 README 索引，不覆盖已有报告。
 
@@ -64,14 +64,14 @@ git diff -- docs/chapter7-progress.md
 | ALUResultSrc | 1 选 AltResult，0 选 ALUResult。 |
 | Jump | 合法 JAL/JALR 为 1；用于 AltResult 选择外部 PCPlus4，否则 AltResult 为 ImmExt。 |
 | ResultSrc | 1 选外部 ReadData，0 选 IEUResult。 |
-| MemRW[1:0] | {MemRead,MemWrite}：00 空闲，10 加载，01 存储；兼容 MemWrite=MemRW[0]。 |
+| MemRW[1:0] | {MemRead,MemWrite}：00 空闲，10 加载，01 存储；IEU 兼容 MemWrite=MemRW[0]；CPU MemWrite 为实际有效掩码的归约或。 |
 | PCSrc | 六种分支条件成立，或合法 JAL/JALR 时选择 IEUAdr。 |
 
 Controller 使用完整 `Funct7[6:0]`，接收独立 Eq/LT/LTU；非法 opcode/funct3/funct7 不产生寄存器写、访存请求或跳转，不实现陷阱。
 
 ALU 的 IEUAdr 始终为加减器结果，不能误用逻辑或移位运算结果作地址。Datapath 的 RawIEUAdr 与 ALUResult 分离；AUIPC 用当前 PC。JALR 地址仅在 Datapath 根据 opcode 清除位 0，保留位 1，IFU 不再重复处理。该地址清位是数据通路约定，非法 JALR 的执行副作用仍由 Controller 关闭。
 
-### 第 8 轮交付与尚未接通的部分
+### 当前连接与观察接口
 
 独立 IEU 有 **12 个端口**（含 clk/reset）：
 
@@ -81,9 +81,9 @@ ALU 的 IEUAdr 始终为加减器结果，不能误用逻辑或移位运算结�
 
 Funct3 恒为 Instr[14:12]，包括非访存、非法指令和复位期间。WriteData 恒为完整原始 R2。ReadData 表示外部已经处理完成的加载结果，IEU 原样写回；字节提取、符号扩展和写数据复制由 LSU 负责，第 13 轮已连接四个访存模块。
 
-当前 [RiscvSingle.scala](../src/main/scala/riscvsingle/RiscvSingle.scala) 将兼容 MemWrite、MemRW、Funct3 一并连接 [LSU.scala](../src/main/scala/riscvsingle/lsu/LSU.scala)。两份重新生成的 CPU 导出中，IEU 保留完整 12 端口，LSU 为 7 端口；CPU 顶层仍为 5 端口，尚无顶层 ByteMask 观察输出。LSU 内部 ByteMask 是大小/偏移掩码，实际写入另由双使能门控。
+当前 [RiscvSingle.scala](../src/main/scala/riscvsingle/RiscvSingle.scala) 已完整连接 IFU/IEU/LSU。IEU 保留 12 端口，LSU 新增有效 ByteMask 输出共 8 端口；CPU 共 8 端口。顶层 MemRW 在 reset 有效时为零，Funct3 保留原指令字段；顶层 ByteMask/MemWrite 为实际合法、自然对齐、请求有效的写入通道/使能。
 
-第 13 轮已实现子字加载/存储与未对齐读零、不写。CPU 已接入该数据路径，本轮证明独立 LSU 与 IEU 子字写回，并保持现有整机程序结果；完整 RV32 子字整机签名验收仍归第 16 轮。**CPU 顶层 MemWrite 仍表示 IEU 请求，顶层复位期间抑制存储写入尚待第 16 轮。** IEU 自身 reset 只阻止寄存器正常写入，不屏蔽组合 MemRW/MemWrite/PCSrc。
+第 16 轮在顶层立即屏蔽复位期间访存；IEU 的同步复位禁止 RF 正常写入，PC/x0 上升沿复位，RAM 内容保持。非法指令关闭副作用，未对齐读零、不写，不实现异常处理。独立 LSU 没有 reset，包装层 reset 不禁止其写入；CPU 的复位门控由父模块负责。
 
 ## 4. 验证证据与复现
 
@@ -192,7 +192,7 @@ make test-rtl
 
 RTL 位于 `generated/dtim{,64}/DTIM.v`，两者深度为 64 原生字；VCD 位于 `target/waveforms/dtim{32,64}.vcd`，GTKWave 配置位于 `waves/dtim{32,64}.gtkw`。日志在 `target/dtim-round12/`。旧 LSU/CPU 硬件和此前交付保持，RAM 内容只由生产写口建立，不假定上电值。
 
-### 第 13 轮当前交付
+### 第 13 轮历史交付
 
 先核对教材 §7.1.6/图 7.9 和 CVW `lsu/lsu.sv` 的 DTIM/Subword Accesses 连接，再完善 RV32 LSU。7 端口包含 clk、兼容 MemWrite、MemRW、Funct3、IEUAdr、WriteData、ReadData；三种存储和五种加载均已连接，非法/未对齐读零、不写。详见 [LSU 第七章核验报告](modules/17-lsu-chapter7.md)，原第二章报告保留为历史。
 
@@ -211,25 +211,29 @@ make test-rtl
 make test-lsu-wave SBT=./scripts/sbt-local.sh
 ```
 
-独立 RTL 为 `generated/lsu/LSU.v`、`generated/lsu128/LSU.v`，均为 RV32；两份 CPU RTL 同步更新。VCD 为 `target/waveforms/lsu32.vcd`，GTKWave 配置为 `waves/lsu32.gtkw`。日志在 `target/lsu-round13/`，首次失败保留 regression.log，最终通过为 regression-final.log。已交付四个叶模块与本地规范文件保持，未自动提交。
+独立 RTL 为 `generated/lsu/LSU.v`、`generated/lsu128/LSU.v`，均为 RV32；两份 CPU RTL 同步更新。VCD 为 `target/waveforms/lsu32.vcd`，GTKWave 配置为 `waves/lsu32.gtkw`。日志在 `target/lsu-round13/`，首次失败保留 regression.log，最终通过为 regression-final.log。上述为第 13 轮历史交付；第 11–13 轮现已补提交 f826665，本地规范文件继续保持。
 
-## 5. 剩余轮次与验收要求
+## 5. 最终整机验收
 
-按 10-05 最新指令，每轮测试、RTL和报告完成后提交并连续推进；中间不主动生成或核对波形，全部模块完成后统一核对。
+第 16 轮报告：[20-riscv-single-chapter7.md](modules/20-riscv-single-chapter7.md)。完整程序 114 条指令、110 个执行周期、37 次有效存储，覆盖全部 37 类 RV32、六种分支各两个结果、33 个固定签名；提供汇编、两种配置完整镜像、逐周期 trace、覆盖/签名 JSON。
 
-| 轮次 / 模块 | 本轮接口与功能 | 核验重点 |
-| --- | --- | --- |
-| 16 · RiscvSingle | 接通升级 IFU/IEU/LSU；保留观察输出，新增 MemRW/Funct3/ByteMask；顶层复位期间禁止正常寄存器和存储写入。 | 第二章程序与第七章完整签名、子字事务、不同容量/复位地址、Chisel 和生成 RTL。 |
+新增 CpuResetSpec 两项在原硬件均失败，顶层门控修复后通过；原整机 4 项保持，新增完整验收 2 项。全工程最终 20 套件、188/188；四种生成 CPU RTL 各三个随机初值种子，共 12 次 PASS。完整 CPU 波形额外核对真实 PC、Instr、PC+4；所有 12 份波形及预选路径核对通过。
 
-新增模块的源码与测试建议放在 `src/{main,test}/scala/riscvsingle/lsu`；按现有 `Generate*` 与 Makefile 风格提供独立生成入口。本阶段不加入旋转、RV64 字运算、流水线、总线、缓存或地址保护。
+```bash
+make build-acceptance
+make generate-acceptance SBT=./scripts/sbt-local.sh
+./scripts/sbt-local.sh test
+make test-rtl
+make test-final-waves SBT=./scripts/sbt-local.sh
+```
 
-最终范围以表 7.1 的 RV32 列为准；FENCE、ECALL、EBREAK、CSR、异常、中断和扩展均不纳入。软件自然对齐；确定的未对齐读零/不写行为不代表异常处理。最终须确保每类指令具有定向和参考验证、原程序结果保持、子字写不破坏邻接字节、两种容量 Chisel 与 RTL 验证通过。
+日志在 target/chapter7-final；汇编/镜像在 programs，生成 RTL 在 generated，VCD 在 target/waveforms，GTKWave 配置在 waves。
 
-## 6. 恢复执行步骤与逐轮交付规则
+## 6. 完成范围与提交规则
 
-后续执行者先读本报告、README、相关模块源码及对应核验报告，再确认 git 状态和最新用户授权。不要把第二章已实现的 IROM/IFU/LSU/RiscvSingle 当作已完成第七章的后续核验。
+用户的最后规则已执行：IROM/IFU 逐轮测试后提交；全部模块完成后统一生成和核对波形；第 16 轮验收与报告纳入本轮提交，提交号见 git log。保留此前未提交的本地 Chisel 规范文件，不将其混入模块提交，不自动合并或推送。
 
-第 14 轮已完成 IROM 核验（8/8、全工程181/181），报告为 [18-irom-chapter7.md](modules/18-irom-chapter7.md)。第15轮IFU也已完成（9/9、全184/184），报告为 [19-ifu-chapter7.md](modules/19-ifu-chapter7.md)。接下来完成 RiscvSingle，每轮测试通过后提交。最终提供完整 RV32 汇编、机器码与两种配置的 Chisel/RTL 验收，再统一生成、核对波形并提交交付。保留同步复位、小端、容量回绕和不移植流水线/缓存/总线的范围。
+SwByteMask 必须保留：已连接 LSU/DTIM 并决定 SB/SH/SW 更新的字节通道。整机为 RV32；辅助模块独立支持 32/64 位不表示整机支持 RV64。FENCE、ECALL、EBREAK、CSR、异常、中断、流水线、缓存与总线均不纳入教材本阶段的 37 类范围。仿真加载不等于 FPGA/ASIC 固化，也尚无综合/时序验证。
 
 ## 7. 资料入口
 
@@ -237,4 +241,4 @@ make test-lsu-wave SBT=./scripts/sbt-local.sh
 - CVW：`/home/unlastingstar/cvw/src`；执行单元参照 `ieu/{ieu,controller,datapath}.sv`，访存参照 `lsu/{swbytemask,subwordwrite,subwordread,dtim,lsu}.sv`。只参考本轮相关结构，不移植其流水线或扩展接口。
 - [README 与模块索引](../README.md)、[统一配置](../src/main/scala/riscvsingle/config/CpuConfig.scala)、[IEU 当前报告](modules/07-ieu.md)、[RTL 整机验证说明](12-rtl-validation.md)。
 
-**当前推进：IROM/IFU 已通过，继续 RiscvSingle；每轮测试后提交，最终统一生成/核对波形。**
+**当前状态：16/16 轮完成；测试、RTL 和最终波形核对均通过，本轮验收与报告纳入 git commit。**

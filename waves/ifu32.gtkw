@@ -1,0 +1,12 @@
+[timestart] 0
+[size] 1300 750
+[signals_width] 280
+@28
+IFUHarness.clock
+IFUHarness.reset
+IFUHarness.io_PCSrc
+@22
+IFUHarness.io_IEUAdr
+IFUHarness.io_PC
+IFUHarness.io_PCPlus4
+IFUHarness.io_Instr

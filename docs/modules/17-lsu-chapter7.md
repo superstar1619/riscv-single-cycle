@@ -175,3 +175,9 @@ target、test_run_dir、生成 .fir/.anno.json 被忽略；源码、测试、生
 
 第 13 轮 LSU 已完成，子字数据路径已通过必要连接接入 CPU；完整 RV32 整机程序、
 公开观察接口和复位写入屏蔽仍留在后续轮次。**本轮停止等待检查，下一轮 IROM；未提交、合并或推送。**
+
+
+第 16 轮接口补充：LSU 新增有效 `io.ByteMask` 输出，共 8 端口，原内部 ByteMask 保留尺寸/偏移译码。
+输出仅在兼容 MemWrite、MemRW(0)、合法尺寸/对齐同时满足时有效；否则为零。
+CPU 使用此输出生成实际 MemWrite，复位门控由顶层完成；独立 LSU 仍无 reset。
+256 组组合测试新增有效掩码核对，详细当前接口见 [整机报告](20-riscv-single-chapter7.md)。

@@ -18,6 +18,9 @@ RiscvSingleHarness.dut.ieu.dp.Result
 RiscvSingleHarness.dut.ieu.dp.ALUResult
 RiscvSingleHarness.io_IEUAdr
 RiscvSingleHarness.io_WriteData
+RiscvSingleHarness.io_MemRW
+RiscvSingleHarness.io_Funct3
+RiscvSingleHarness.io_ByteMask
 @28
 RiscvSingleHarness.io_MemWrite
 @22

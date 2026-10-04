@@ -2,13 +2,13 @@ module IROM(
   input  [31:0] io_a, // @[src/main/scala/riscvsingle/ifu/IROM.scala 20:14]
   output [31:0] io_rd // @[src/main/scala/riscvsingle/ifu/IROM.scala 20:14]
 );
-  reg [31:0] ROM [0:63]; // @[src/main/scala/riscvsingle/ifu/IROM.scala 26:16]
+  reg [31:0] ROM [0:255]; // @[src/main/scala/riscvsingle/ifu/IROM.scala 26:16]
   wire  ROM_io_rd_MPORT_en; // @[src/main/scala/riscvsingle/ifu/IROM.scala 26:16]
-  wire [5:0] ROM_io_rd_MPORT_addr; // @[src/main/scala/riscvsingle/ifu/IROM.scala 26:16]
+  wire [7:0] ROM_io_rd_MPORT_addr; // @[src/main/scala/riscvsingle/ifu/IROM.scala 26:16]
   wire [31:0] ROM_io_rd_MPORT_data; // @[src/main/scala/riscvsingle/ifu/IROM.scala 26:16]
   wire  _GEN_0 = 1'h0;
   assign ROM_io_rd_MPORT_en = 1'h1;
-  assign ROM_io_rd_MPORT_addr = io_a[7:2];
+  assign ROM_io_rd_MPORT_addr = io_a[9:2];
   assign ROM_io_rd_MPORT_data = ROM[ROM_io_rd_MPORT_addr]; // @[src/main/scala/riscvsingle/ifu/IROM.scala 26:16]
   assign io_rd = ROM_io_rd_MPORT_data; // @[src/main/scala/riscvsingle/ifu/IROM.scala 30:9]
 // Register and memory initialization
@@ -45,7 +45,7 @@ initial begin
       `endif
     `endif
   `endif // RANDOMIZE
-  $readmemh("programs/riscvtest.memfile", ROM);
+  $readmemh("programs/rv32-acceptance-expanded.memfile", ROM);
 end // initial
 `ifdef FIRRTL_AFTER_INITIAL
 `FIRRTL_AFTER_INITIAL
@@ -77,7 +77,7 @@ module IFU(
   assign irom_io_a = pcreg; // @[src/main/scala/riscvsingle/ifu/IFU.scala 35:13]
   always @(posedge clk) begin
     if (reset) begin // @[src/main/scala/riscvsingle/ifu/IFU.scala 27:12]
-      pcreg <= 32'h0; // @[src/main/scala/riscvsingle/ifu/IFU.scala 27:12]
+      pcreg <= 32'h100; // @[src/main/scala/riscvsingle/ifu/IFU.scala 27:12]
     end else if (io_PCSrc) begin // @[src/main/scala/riscvsingle/ifu/IFU.scala 33:16]
       pcreg <= io_IEUAdr;
     end else begin
@@ -1050,66 +1050,66 @@ module DTIM(
   reg [31:0] _RAND_2;
   reg [31:0] _RAND_3;
 `endif // RANDOMIZE_MEM_INIT
-  reg [7:0] RAM_0 [0:63]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  reg [7:0] RAM_0 [0:127]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_0_ReadBytes_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  wire [5:0] RAM_0_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_0_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire [7:0] RAM_0_ReadBytes_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire [7:0] RAM_0_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  wire [5:0] RAM_0_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_0_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_0_MPORT_mask; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_0_MPORT_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  reg [7:0] RAM_1 [0:63]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  reg [7:0] RAM_1 [0:127]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_1_ReadBytes_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  wire [5:0] RAM_1_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_1_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire [7:0] RAM_1_ReadBytes_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire [7:0] RAM_1_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  wire [5:0] RAM_1_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_1_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_1_MPORT_mask; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_1_MPORT_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  reg [7:0] RAM_2 [0:63]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  reg [7:0] RAM_2 [0:127]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_2_ReadBytes_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  wire [5:0] RAM_2_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_2_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire [7:0] RAM_2_ReadBytes_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire [7:0] RAM_2_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  wire [5:0] RAM_2_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_2_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_2_MPORT_mask; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_2_MPORT_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  reg [7:0] RAM_3 [0:63]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  reg [7:0] RAM_3 [0:127]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_3_ReadBytes_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  wire [5:0] RAM_3_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_3_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire [7:0] RAM_3_ReadBytes_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire [7:0] RAM_3_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
-  wire [5:0] RAM_3_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_3_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_3_MPORT_mask; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire  RAM_3_MPORT_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   wire [31:0] _io_ReadDataWord_T = {RAM_3_ReadBytes_data,RAM_2_ReadBytes_data,RAM_1_ReadBytes_data,RAM_0_ReadBytes_data}
     ; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 39:48]
   assign RAM_0_ReadBytes_en = 1'h1;
-  assign RAM_0_ReadBytes_addr = io_Adr[7:2];
+  assign RAM_0_ReadBytes_addr = io_Adr[8:2];
   assign RAM_0_ReadBytes_data = RAM_0[RAM_0_ReadBytes_addr]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   assign RAM_0_MPORT_data = io_WriteDataWord[7:0];
-  assign RAM_0_MPORT_addr = io_Adr[7:2];
+  assign RAM_0_MPORT_addr = io_Adr[8:2];
   assign RAM_0_MPORT_mask = io_ByteMask[0];
   assign RAM_0_MPORT_en = io_MemWrite;
   assign RAM_1_ReadBytes_en = 1'h1;
-  assign RAM_1_ReadBytes_addr = io_Adr[7:2];
+  assign RAM_1_ReadBytes_addr = io_Adr[8:2];
   assign RAM_1_ReadBytes_data = RAM_1[RAM_1_ReadBytes_addr]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   assign RAM_1_MPORT_data = io_WriteDataWord[15:8];
-  assign RAM_1_MPORT_addr = io_Adr[7:2];
+  assign RAM_1_MPORT_addr = io_Adr[8:2];
   assign RAM_1_MPORT_mask = io_ByteMask[1];
   assign RAM_1_MPORT_en = io_MemWrite;
   assign RAM_2_ReadBytes_en = 1'h1;
-  assign RAM_2_ReadBytes_addr = io_Adr[7:2];
+  assign RAM_2_ReadBytes_addr = io_Adr[8:2];
   assign RAM_2_ReadBytes_data = RAM_2[RAM_2_ReadBytes_addr]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   assign RAM_2_MPORT_data = io_WriteDataWord[23:16];
-  assign RAM_2_MPORT_addr = io_Adr[7:2];
+  assign RAM_2_MPORT_addr = io_Adr[8:2];
   assign RAM_2_MPORT_mask = io_ByteMask[2];
   assign RAM_2_MPORT_en = io_MemWrite;
   assign RAM_3_ReadBytes_en = 1'h1;
-  assign RAM_3_ReadBytes_addr = io_Adr[7:2];
+  assign RAM_3_ReadBytes_addr = io_Adr[8:2];
   assign RAM_3_ReadBytes_data = RAM_3[RAM_3_ReadBytes_addr]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
   assign RAM_3_MPORT_data = io_WriteDataWord[31:24];
-  assign RAM_3_MPORT_addr = io_Adr[7:2];
+  assign RAM_3_MPORT_addr = io_Adr[8:2];
   assign RAM_3_MPORT_mask = io_ByteMask[3];
   assign RAM_3_MPORT_en = io_MemWrite;
   assign io_ReadDataWord = io_MemRead ? _io_ReadDataWord_T : 32'h0; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 39:25]
@@ -1164,16 +1164,16 @@ initial begin
     `endif
 `ifdef RANDOMIZE_MEM_INIT
   _RAND_0 = {1{`RANDOM}};
-  for (initvar = 0; initvar < 64; initvar = initvar+1)
+  for (initvar = 0; initvar < 128; initvar = initvar+1)
     RAM_0[initvar] = _RAND_0[7:0];
   _RAND_1 = {1{`RANDOM}};
-  for (initvar = 0; initvar < 64; initvar = initvar+1)
+  for (initvar = 0; initvar < 128; initvar = initvar+1)
     RAM_1[initvar] = _RAND_1[7:0];
   _RAND_2 = {1{`RANDOM}};
-  for (initvar = 0; initvar < 64; initvar = initvar+1)
+  for (initvar = 0; initvar < 128; initvar = initvar+1)
     RAM_2[initvar] = _RAND_2[7:0];
   _RAND_3 = {1{`RANDOM}};
-  for (initvar = 0; initvar < 64; initvar = initvar+1)
+  for (initvar = 0; initvar < 128; initvar = initvar+1)
     RAM_3[initvar] = _RAND_3[7:0];
 `endif // RANDOMIZE_MEM_INIT
   `endif // RANDOMIZE

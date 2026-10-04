@@ -1,0 +1,10 @@
+[timestart] 0
+[size] 1200 700
+[signals_width] 280
+@28
+IROMHarness.clock
+IROMHarness.reset
+@22
+IROMHarness.io_a
+IROMHarness.io_rd
+IROMHarness.dut.WordIndex

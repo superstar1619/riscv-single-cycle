@@ -12,6 +12,7 @@ final class LSUIO(config: CpuConfig) extends Bundle {
   val IEUAdr = Input(UInt(config.xlen.W))
   val WriteData = Input(UInt(config.xlen.W))
   val ReadData = Output(UInt(config.xlen.W))
+  val ByteMask = Output(UInt(4.W))
 }
 
 /** 教材 §7.1.6/图 7.9 的单周期 LSU，参考 CVW 的四个子字访存模块连接。
@@ -66,4 +67,6 @@ final class LSU(val config: CpuConfig = CpuConfig()) extends RawModule {
   subwordRead.io.ByteOffset := ByteOffset
   subwordRead.io.Funct3 := io.Funct3
   io.ReadData := subwordRead.io.ReadData
+  // 对外报告实际写入通道；内部 ByteMask 仍保留尺寸/对齐译码结果。
+  io.ByteMask := Mux(MemWrite, ByteMask, 0.U(4.W))
 }

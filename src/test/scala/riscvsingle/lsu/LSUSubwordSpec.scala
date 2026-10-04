@@ -165,6 +165,10 @@ class LSUSubwordSpec extends AnyFlatSpec with ChiselScalatestTester {
         request(dut, offset, funct3, memRW, compatible, hex("dead8123"))
         val before = if ((memRW & 2) != 0) load(model, offset, funct3) else BigInt(0)
         dut.io.ReadData.expect(before.U)
+        val bytes = size(funct3, store = true)
+        val mask = if ((memRW & 1) != 0 && compatible && bytes != 0 &&
+          offset % bytes == 0) ((1 << bytes) - 1) << offset else 0
+        dut.io.ByteMask.expect(mask.U) // 有效写掩码须包含请求、兼容使能与对齐条件。
         dut.clock.step()
         if ((memRW & 1) != 0 && compatible) store(model, offset, funct3, hex("dead8123"))
         val after = if ((memRW & 2) != 0) load(model, offset, funct3) else BigInt(0)

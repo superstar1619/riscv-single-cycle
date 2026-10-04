@@ -197,49 +197,51 @@ module SubwordRead(
   assign io_ReadData = 3'h5 == io_Funct3 ? _T_9 : _io_ReadData_T_7; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
 endmodule
 module LSU(
-  input         clk, // @[src/main/scala/riscvsingle/lsu/LSU.scala 23:15]
-  input         io_MemWrite, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
-  input  [1:0]  io_MemRW, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
-  input  [2:0]  io_Funct3, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
-  input  [31:0] io_IEUAdr, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
-  input  [31:0] io_WriteData, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
-  output [31:0] io_ReadData // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
+  input         clk, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:15]
+  input         io_MemWrite, // @[src/main/scala/riscvsingle/lsu/LSU.scala 25:14]
+  input  [1:0]  io_MemRW, // @[src/main/scala/riscvsingle/lsu/LSU.scala 25:14]
+  input  [2:0]  io_Funct3, // @[src/main/scala/riscvsingle/lsu/LSU.scala 25:14]
+  input  [31:0] io_IEUAdr, // @[src/main/scala/riscvsingle/lsu/LSU.scala 25:14]
+  input  [31:0] io_WriteData, // @[src/main/scala/riscvsingle/lsu/LSU.scala 25:14]
+  output [31:0] io_ReadData, // @[src/main/scala/riscvsingle/lsu/LSU.scala 25:14]
+  output [3:0]  io_ByteMask // @[src/main/scala/riscvsingle/lsu/LSU.scala 25:14]
 );
-  wire [2:0] swByteMask_io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 39:26]
-  wire [1:0] swByteMask_io_ByteOffset; // @[src/main/scala/riscvsingle/lsu/LSU.scala 39:26]
-  wire [3:0] swByteMask_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 39:26]
-  wire [31:0] subwordWrite_io_WriteData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:28]
-  wire [2:0] subwordWrite_io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:28]
-  wire [31:0] subwordWrite_io_WriteDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:28]
-  wire  dtim_clk; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
-  wire [31:0] dtim_io_Adr; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
-  wire  dtim_io_MemRead; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
-  wire  dtim_io_MemWrite; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
-  wire [31:0] dtim_io_WriteDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
-  wire [3:0] dtim_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
-  wire [31:0] dtim_io_ReadDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
-  wire [31:0] subwordRead_io_ReadDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:27]
-  wire [1:0] subwordRead_io_ByteOffset; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:27]
-  wire [2:0] subwordRead_io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:27]
-  wire [31:0] subwordRead_io_ReadData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:27]
-  wire [1:0] ByteOffset = io_IEUAdr[1:0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:26]
-  wire  HalfwordAligned = ~ByteOffset[0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 28:25]
-  wire  WordAligned = ByteOffset == 2'h0; // @[src/main/scala/riscvsingle/lsu/LSU.scala 29:32]
-  wire  _LoadAllowed_T_3 = 3'h1 == io_Funct3 ? HalfwordAligned : 3'h0 == io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 31:47]
-  wire  _LoadAllowed_T_5 = 3'h2 == io_Funct3 ? WordAligned : _LoadAllowed_T_3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 31:47]
-  wire  LoadAllowed = 3'h5 == io_Funct3 ? HalfwordAligned : 3'h4 == io_Funct3 | _LoadAllowed_T_5; // @[src/main/scala/riscvsingle/lsu/LSU.scala 31:47]
-  wire [3:0] ByteMask = swByteMask_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 50:22 55:12]
-  SwByteMask swByteMask ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 39:26]
+  wire [2:0] swByteMask_io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:26]
+  wire [1:0] swByteMask_io_ByteOffset; // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:26]
+  wire [3:0] swByteMask_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:26]
+  wire [31:0] subwordWrite_io_WriteData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:28]
+  wire [2:0] subwordWrite_io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:28]
+  wire [31:0] subwordWrite_io_WriteDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:28]
+  wire  dtim_clk; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:20]
+  wire [31:0] dtim_io_Adr; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:20]
+  wire  dtim_io_MemRead; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:20]
+  wire  dtim_io_MemWrite; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:20]
+  wire [31:0] dtim_io_WriteDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:20]
+  wire [3:0] dtim_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:20]
+  wire [31:0] dtim_io_ReadDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:20]
+  wire [31:0] subwordRead_io_ReadDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 43:27]
+  wire [1:0] subwordRead_io_ByteOffset; // @[src/main/scala/riscvsingle/lsu/LSU.scala 43:27]
+  wire [2:0] subwordRead_io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 43:27]
+  wire [31:0] subwordRead_io_ReadData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 43:27]
+  wire [1:0] ByteOffset = io_IEUAdr[1:0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 28:26]
+  wire  HalfwordAligned = ~ByteOffset[0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 29:25]
+  wire  WordAligned = ByteOffset == 2'h0; // @[src/main/scala/riscvsingle/lsu/LSU.scala 30:32]
+  wire  _LoadAllowed_T_3 = 3'h1 == io_Funct3 ? HalfwordAligned : 3'h0 == io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 32:47]
+  wire  _LoadAllowed_T_5 = 3'h2 == io_Funct3 ? WordAligned : _LoadAllowed_T_3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 32:47]
+  wire  LoadAllowed = 3'h5 == io_Funct3 ? HalfwordAligned : 3'h4 == io_Funct3 | _LoadAllowed_T_5; // @[src/main/scala/riscvsingle/lsu/LSU.scala 32:47]
+  wire [3:0] ByteMask = swByteMask_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 51:22 56:12]
+  wire  MemWrite = io_MemWrite & io_MemRW[0] & |ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 55:45]
+  SwByteMask swByteMask ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:26]
     .io_Funct3(swByteMask_io_Funct3),
     .io_ByteOffset(swByteMask_io_ByteOffset),
     .io_ByteMask(swByteMask_io_ByteMask)
   );
-  SubwordWrite subwordWrite ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:28]
+  SubwordWrite subwordWrite ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:28]
     .io_WriteData(subwordWrite_io_WriteData),
     .io_Funct3(subwordWrite_io_Funct3),
     .io_WriteDataWord(subwordWrite_io_WriteDataWord)
   );
-  DTIM dtim ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
+  DTIM dtim ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:20]
     .clk(dtim_clk),
     .io_Adr(dtim_io_Adr),
     .io_MemRead(dtim_io_MemRead),
@@ -248,24 +250,25 @@ module LSU(
     .io_ByteMask(dtim_io_ByteMask),
     .io_ReadDataWord(dtim_io_ReadDataWord)
   );
-  SubwordRead subwordRead ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:27]
+  SubwordRead subwordRead ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 43:27]
     .io_ReadDataWord(subwordRead_io_ReadDataWord),
     .io_ByteOffset(subwordRead_io_ByteOffset),
     .io_Funct3(subwordRead_io_Funct3),
     .io_ReadData(subwordRead_io_ReadData)
   );
-  assign io_ReadData = subwordRead_io_ReadData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 68:15]
-  assign swByteMask_io_Funct3 = io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 44:24]
-  assign swByteMask_io_ByteOffset = io_IEUAdr[1:0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:26]
-  assign subwordWrite_io_WriteData = io_WriteData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 47:29]
-  assign subwordWrite_io_Funct3 = io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 46:26]
-  assign dtim_clk = clk; // @[src/main/scala/riscvsingle/lsu/LSU.scala 57:12]
-  assign dtim_io_Adr = io_IEUAdr; // @[src/main/scala/riscvsingle/lsu/LSU.scala 58:15]
-  assign dtim_io_MemRead = io_MemRW[1] & LoadAllowed; // @[src/main/scala/riscvsingle/lsu/LSU.scala 53:29]
-  assign dtim_io_MemWrite = io_MemWrite & io_MemRW[0] & |ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 54:45]
-  assign dtim_io_WriteDataWord = subwordWrite_io_WriteDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 51:27 56:17]
-  assign dtim_io_ByteMask = swByteMask_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 50:22 55:12]
-  assign subwordRead_io_ReadDataWord = dtim_io_ReadDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 52:26 63:16]
-  assign subwordRead_io_ByteOffset = io_IEUAdr[1:0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:26]
-  assign subwordRead_io_Funct3 = io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 67:25]
+  assign io_ReadData = subwordRead_io_ReadData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 69:15]
+  assign io_ByteMask = MemWrite ? ByteMask : 4'h0; // @[src/main/scala/riscvsingle/lsu/LSU.scala 71:21]
+  assign swByteMask_io_Funct3 = io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 45:24]
+  assign swByteMask_io_ByteOffset = io_IEUAdr[1:0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 28:26]
+  assign subwordWrite_io_WriteData = io_WriteData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 48:29]
+  assign subwordWrite_io_Funct3 = io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 47:26]
+  assign dtim_clk = clk; // @[src/main/scala/riscvsingle/lsu/LSU.scala 58:12]
+  assign dtim_io_Adr = io_IEUAdr; // @[src/main/scala/riscvsingle/lsu/LSU.scala 59:15]
+  assign dtim_io_MemRead = io_MemRW[1] & LoadAllowed; // @[src/main/scala/riscvsingle/lsu/LSU.scala 54:29]
+  assign dtim_io_MemWrite = io_MemWrite & io_MemRW[0] & |ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 55:45]
+  assign dtim_io_WriteDataWord = subwordWrite_io_WriteDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 52:27 57:17]
+  assign dtim_io_ByteMask = swByteMask_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 51:22 56:12]
+  assign subwordRead_io_ReadDataWord = dtim_io_ReadDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 53:26 64:16]
+  assign subwordRead_io_ByteOffset = io_IEUAdr[1:0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 28:26]
+  assign subwordRead_io_Funct3 = io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 68:25]
 endmodule
