@@ -206,6 +206,35 @@ class IEUSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
+  it should "wire upper immediates and JALR links through the upgraded Datapath" in {
+    test(new IEUHarness) { dut =>
+      dut.reset.poke(false.B)
+      drive(dut, BigInt("800000b7", 16), pc = 0x100) // lui x1, 0x80000
+      dut.io.PCPlus4.poke("hfeedbeef".U)
+      dut.io.PCSrc.expect(false.B)
+      dut.clock.step()
+      expectRegister(dut, 1, BigInt("80000000", 16))
+      drive(dut, BigInt("fffff117", 16), pc = 0x100) // auipc x2, 0xfffff
+      dut.io.PCPlus4.poke("hfeedbeef".U)
+      dut.io.IEUAdr.expect("hfffff100".U)
+      dut.clock.step()
+      expectRegister(dut, 2, BigInt("fffff100", 16))
+      retire(dut, iType(3, 0, 3))
+      drive(dut, iType(3, 3, 0, opcode = 0x67), pc = 0x200)
+      dut.io.PCPlus4.poke(0xabc.U)
+      dut.io.PCSrc.expect(true.B)
+      dut.io.IEUAdr.expect(2.U)
+      dut.clock.step()
+      expectRegister(dut, 3, 0xabc)
+      drive(dut, iType(0, 3, -1, opcode = 0x67), pc = 0x200)
+      dut.io.PCSrc.expect(true.B)
+      dut.io.IEUAdr.expect(0xaba.U)
+      dut.clock.step()
+      expectRegister(dut, 0, 0)
+      expectRegister(dut, 3, 0xabc)
+    }
+  }
+
   it should "execute Code Example 2.16 using only the IEU production interface" in {
     test(new IEUHarness) { dut =>
       val words = Seq("00500113", "00c00193", "ff718393", "0023e233", "0041f2b3",

@@ -1,136 +1,206 @@
-# 模块 06：Datapath 数据通路核验报告
+# 模块 06：Datapath 数据通路核验报告（第七章第 7 轮）
 
-## 1. 依据与交付状态
+## 1. 依据与本轮范围
 
-对应《RISC-V System-on-Chip Design, Edition 1》Code Example 2.15 的 `datapath`，书中第 63 页。本模块将已核验的 RegFile、Extend、Cmp、ALU 连接起来，完成寄存器读取、立即数扩展、操作数选择、运算、地址输出及寄存器写回。
+依据本地《RISC-V System-on-Chip Design, Edition 1》第七章 §7.1、图 7.2 和表 7.1 的 RV32 列。操作数、结果和地址的关系对应 §7.1.3 与表 7.3（第 304–305 页）；立即数扩展对应 §7.1.2；寄存器与比较器行为分别对应 §7.1.1、§7.1.3.6。CVW 参考文件为 `/home/unlastingstar/cvw/src/ieu/datapath.sv`，其中 `altresultmux` 与 `ieuresultmux` 对应本轮替代结果和执行结果选择；JALR 目标清位按当前逐轮计划放在 Datapath，IFU 后续不重复清位。
 
-上一模块 Controller 已按用户指示提交，提交号为 `668d141`。本轮交付 **Datapath 一个硬件模块**及其生成入口、测试和报告。Controller 与 Datapath 的连接仅出现在测试辅助顶层；生产 IEU 留待下一轮。
-
-状态：**Datapath 测试通过，尚未提交，等待用户核验。**
+上一轮 Controller 已按用户指示提交为 `ffbb866`，提交前 13 个套件、102 项回归全部通过。本轮只完善 **Datapath**；IEU 接入新 Jump 输入、测试包装和生成 RTL 适配归入当前轮。IEU 的 MemRW/Funct3 外部交付和完整执行序列验证留待第 8 轮，子字访存与顶层完善仍按后续模块顺序进行。
 
 | 交付内容 | 路径 |
 | --- | --- |
-| 模块及端口定义 | [Datapath.scala](../../src/main/scala/riscvsingle/ieu/Datapath.scala) |
-| Verilog 生成入口 | [GenerateDatapath.scala](../../src/main/scala/riscvsingle/GenerateDatapath.scala) |
+| 模块及端口 | [Datapath.scala](../../src/main/scala/riscvsingle/ieu/Datapath.scala) |
+| 生成入口 | [GenerateDatapath.scala](../../src/main/scala/riscvsingle/GenerateDatapath.scala) |
 | 模块测试 | [DatapathSpec.scala](../../src/test/scala/riscvsingle/ieu/DatapathSpec.scala) |
-| 生成的硬件，含四个子模块 | [Datapath.v](../../generated/datapath/Datapath.v) |
+| IEU 连接适配 | [IEU.scala](../../src/main/scala/riscvsingle/ieu/IEU.scala) |
+| 联调测试 | [IEUSpec.scala](../../src/test/scala/riscvsingle/ieu/IEUSpec.scala) |
+| 模块 RTL | [Datapath.v](../../generated/datapath/Datapath.v) |
 
-## 2. 接口与参数配置
+## 2. 参数与全部端口
 
-模块类为 `riscvsingle.ieu.Datapath`，继承 `RawModule`，端口 Bundle 为 `DatapathIO`。时钟和复位显式声明为 `clk`、`reset`；组合输入输出具有 `io_` 前缀。共有 13 个输入和 3 个输出。
+类 `riscvsingle.ieu.Datapath` 继承 `RawModule`，构造参数为 `config: CpuConfig = CpuConfig()`。固定 32 位指令、32 项整数寄存器、直接使用指令中的 5 位寄存器编号；本轮不改变共享配置约束。时钟和高有效同步复位显式提供，数据通路自身没有新增状态，状态仍在 RegFile。
 
-构造参数为 `config: CpuConfig = CpuConfig()`。数据宽度由 `config.xlen` 提供，并传给 RegFile、Extend、Cmp、ALU。现有配置检查要求 `xlen=32`，因此本数据通路支持 RV32；指令宽度固定为 32 位，寄存器数量固定为 32，寄存器地址直接采用 5 位指令字段。
+| CpuConfig 字段 | 默认值 | 合法范围 | 在 Datapath 中的用途 |
+| --- | --- | --- | --- |
+| `xlen` | 32 | 当前仅允许 32 | 数据端口与 RegFile/Extend/Cmp/ALU 位宽。独立 64 位辅助模块不代表本模块支持 RV64。 |
+| `imemDepth` | 64 | 不小于 2 的二次幂，32 位字容量对应的字节数不超过 2^32 | 不生成取指存储，随 config 保留。 |
+| `dmemDepth` | 64 | 同上 | 不生成数据存储，随 config 保留。 |
+| `resetVector` | 0 | 0 至 2^32−1，4 字节对齐 | 不生成 PC 状态，本模块使用外部 PC/PCPlus4。 |
+| `instructionInitFile` | None | None 或非空白字符串 | 不初始化寄存器或存储。 |
 
-`imemDepth`、`dmemDepth`、`resetVector`、`instructionInitFile` 在本模块中不参与硬件生成。PC、PCPlus4 和 ReadData 均由外部提供；后续 IFU、IROM、LSU 将使用对应配置。本轮未修改配置类。
+生成入口 `GenerateDatapath` 默认构造 `CpuConfig()`，仅接受可选输出目录 `targetDir`，默认 `generated/datapath`。不同容量及复位地址由 Scala 配置对象传入，接口数据宽度仍为 32。
 
-| Chisel 端口 | Verilog 端口 | 方向 | 类型 / 位宽 | 功能 |
+| Chisel 名称 | 实际 Verilog 端口 | 方向 | 类型 / 位宽 | 用途 |
 | --- | --- | --- | --- | --- |
-| `clk` | `clk` | 输入 | `Clock` / 1 | RegFile 的写入和同步复位时钟，上升沿触发。 |
-| `reset` | `reset` | 输入 | `Bool` / 1 | 高有效同步复位，直接接入 RegFile，只清零 x0，并阻止该周期的普通写入。 |
-| `io.Funct3` | `io_Funct3` | 输入 | `UInt(3.W)` | 传给 ALU 的功能码，通常由外部提供 Instr[14:12]。 |
-| `io.ALUResultSrc` | `io_ALUResultSrc` | 输入 | `Bool` / 1 | 0 选 ALUResult，1 选 PCPlus4，产生 IEUResult。 |
-| `io.ResultSrc` | `io_ResultSrc` | 输入 | `Bool` / 1 | 0 选 IEUResult，1 选 ReadData，产生最终写回 Result。 |
-| `io.ALUSrc` | `io_ALUSrc` | 输入 | `UInt(2.W)` | 位 1 选择 SrcA 的 R1/PC，位 0 选择 SrcB 的 R2/ImmExt。 |
-| `io.RegWrite` | `io_RegWrite` | 输入 | `Bool` / 1 | 请求在时钟上升沿向 Instr[11:7] 指定寄存器写入 Result。 |
-| `io.ImmSrc` | `io_ImmSrc` | 输入 | `UInt(2.W)` | Extend 的 I/S/B/J 格式选择，依次为 00/01/10/11。 |
-| `io.ALUControl` | `io_ALUControl` | 输入 | `UInt(2.W)` | ALU 的 `{Sub, ALUOp}` 控制。 |
-| `io.Eq` | `io_Eq` | 输出 | `Bool` / 1 | 原始寄存器读数 R1 与 R2 是否相等，供 Controller 判断 beq。 |
-| `io.PC` | `io_PC` | 输入 | `UInt(32.W)` | 当前指令字节地址，可选作 ALU 的 A 操作数。 |
-| `io.PCPlus4` | `io_PCPlus4` | 输入 | `UInt(32.W)` | 外部计算的顺序地址，可选作 jal 的链接写回值。 |
-| `io.Instr` | `io_Instr` | 输入 | `UInt(32.W)` | 当前指令，用于提取 rs1、rs2、rd 和立即数。 |
-| `io.IEUAdr` | `io_IEUAdr` | 输出 | `UInt(32.W)` | ALU 的加减法结果，用于访问地址、分支或跳转目标。 |
-| `io.WriteData` | `io_WriteData` | 输出 | `UInt(32.W)` | 始终输出 R2，作为存储器写数据。 |
-| `io.ReadData` | `io_ReadData` | 输入 | `UInt(32.W)` | 外部内存读数据，可选为寄存器写回值。 |
+| `clk` | `clk` | 输入 | Clock / 1 | RegFile 写入及同步复位时钟，上升沿生效。 |
+| `reset` | `reset` | 输入 | Bool / 1 | RegFile 高有效同步复位，只清零 x0，阻止普通写入。 |
+| `io.Funct3` | `io_Funct3` | 输入 | UInt / 3 | 独立提供 ALU 功能码，通常接 Instr[14:12]。 |
+| `io.ALUResultSrc` | `io_ALUResultSrc` | 输入 | Bool / 1 | 0 选择 ALUResult，1 选择 AltResult。 |
+| `io.ResultSrc` | `io_ResultSrc` | 输入 | Bool / 1 | 0 选择 IEUResult，1 选择 ReadData。 |
+| `io.ALUSrc` | `io_ALUSrc` | 输入 | UInt / 2 | {SrcA 选择 PC, SrcB 选择 ImmExt}。 |
+| `io.RegWrite` | `io_RegWrite` | 输入 | Bool / 1 | 请求将 Result 写入 Instr[11:7] 指定寄存器。 |
+| `io.ImmSrc` | `io_ImmSrc` | 输入 | UInt / 3 | 已在上一轮扩为 I/S/B/J/U 选择 000/001/010/011/100；其他值输出零立即数。 |
+| `io.ALUControl` | `io_ALUControl` | 输入 | UInt / 2 | 保留 {SubArith, ALUOp}。 |
+| `io.Jump` | `io_Jump` | 输入 | Bool / 1 | 新增输入，Jump 为 1 时 AltResult 取 PCPlus4，为 0 时取 ImmExt。 |
+| `io.Eq` | `io_Eq` | 输出 | Bool / 1 | 原始 R1=R2。 |
+| `io.LT` | `io_LT` | 输出 | Bool / 1 | 原始 R1<R2 的有符号比较。 |
+| `io.LTU` | `io_LTU` | 输出 | Bool / 1 | 原始 R1<R2 的无符号比较。 |
+| `io.PC` | `io_PC` | 输入 | UInt / 32 | 当前指令的字节地址，可选为 SrcA。 |
+| `io.PCPlus4` | `io_PCPlus4` | 输入 | UInt / 32 | 外部提供的链接值；本模块不重新计算 PC+4。 |
+| `io.Instr` | `io_Instr` | 输入 | UInt / 32 | 指令字段：rs1、rs2、rd、立即数及 JALR opcode 识别。 |
+| `io.IEUAdr` | `io_IEUAdr` | 输出 | UInt / 32 | 原始加减地址；当 opcode=67 时仅清除位 0。 |
+| `io.WriteData` | `io_WriteData` | 输出 | UInt / 32 | 恒为 R2，不受 ALUSrc/写回选择影响。 |
+| `io.ReadData` | `io_ReadData` | 输入 | UInt / 32 | 外部 LSU/测试环境提供的加载数据。 |
 
-`Funct3` 保留书中的独立输入接口，本模块不会自行改用 Instr[14:12]；调用者负责连接一致的指令字段。PCPlus4 同样直接使用输入值，本模块不会重新计算 PC+4。
+共 **19 个端口：14 个输入、5 个输出**。Funct3 和 PCPlus4 仍为独立输入，调用者负责和指令、PC 保持一致；接口测试也刻意提供不同值确认它们生效。数据端口采用 UInt 位模式，有符号运算由子模块解释为 32 位补码。X/Z 四态传播不作为保证。
 
-## 3. 功能与时序
+## 3. 功能、控制与边界
 
-RegFile 的两个异步读地址分别为 Instr[19:15]、Instr[24:20]，写地址为 Instr[11:7]，写数据为 Result。Extend 输入为 Instr[31:7]，其输出是符号扩展后的 ImmExt。
+RegFile 两个读地址为 Instr[19:15]、Instr[24:20]，写地址为 Instr[11:7]。Extend 使用 Instr[31:7] 与 3 位 ImmSrc，五种格式包括 U 型低 12 位补零。Cmp 恒比较 R1/R2，不用被选择的 PC/ImmExt。
 
 | ALUSrc | SrcA | SrcB | 常见用途 |
 | --- | --- | --- | --- |
-| `00` | R1 | R2 | R 型寄存器运算。 |
-| `01` | R1 | ImmExt | I 型运算及 lw/sw 地址。 |
-| `10` | PC | R2 | 接口允许该组合，现有 Controller 不输出此值。 |
-| `11` | PC | ImmExt | beq/jal 目标地址。 |
+| 00 | R1 | R2 | 寄存器 ALU 运算。 |
+| 01 | R1 | ImmExt | 立即数 ALU、加载/存储、JALR。 |
+| 10 | PC | R2 | 接口允许的组合，当前 Controller 不输出。 |
+| 11 | PC | ImmExt | 条件分支、JAL、AUIPC。 |
 
-Cmp 始终比较 R1、R2，与 ALUSrc 无关。WriteData 始终取 R2，即使 ALU 的 B 输入选择立即数也如此。ALUResult 按既有 ALU 规则选择加减、有符号小于、或、与及默认零；IEUAdr 独立输出加减法结果。
-
-写回链路由两级二选一组成：
+ALU 提供完整整数结果 ALUResult 与独立加减结果 RawIEUAdr。替代结果和写回使用教材图 7.2 的三级选择：
 
 ```text
-IEUResult = ALUResultSrc ? PCPlus4 : ALUResult
-Result    = ResultSrc    ? ReadData : IEUResult
+AltResult = Jump         ? PCPlus4  : ImmExt
+IEUResult = ALUResultSrc ? AltResult : ALUResult
+Result    = ResultSrc    ? ReadData  : IEUResult
 ```
 
-| ALUResultSrc | ResultSrc | 写回 Result |
+| ResultSrc | ALUResultSrc | Jump | 最终写回 Result |
+| --- | --- | --- | --- |
+| 1 | 任意 | 任意 | ReadData，优先于 ALU 与两个替代结果。 |
+| 0 | 0 | 任意 | ALUResult。 |
+| 0 | 1 | 0 | ImmExt，用于 LUI。 |
+| 0 | 1 | 1 | 外部 PCPlus4，用于 JAL/JALR。 |
+
+LUI 使用 Controller 的 ImmSrc=100、ALUResultSrc=1、Jump=0，不受 SrcA 中可能读取的寄存器内容影响。AUIPC 使用 ALUSrc=11、ImmSrc=100、ALUOp=0，ALUResultSrc=0，计算 **当前 PC + U 型立即数**，按 2^32 回绕，不采用 PCPlus4。JAL 的目标由 PC+J 型立即数计算，JALR 的原始目标由 R1+I 型立即数计算；两者链接写回均为外部 PCPlus4。
+
+JALR 的目标规则按本阶段接口约定直接识别 opcode，而不依赖 Jump 或指令合法性译码：
+
+```text
+IsJalr    = (Instr[6:0] == 0x67)
+IEUAdr    = IsJalr ? (RawIEUAdr & 0xFFFFFFFE) : RawIEUAdr
+```
+
+仅清除位 0，位 1 保留；本模块不实现指令地址未对齐异常。非 JALR 的奇数加减地址保留，存储地址、分支/JAL 地址不通过该掩码。ALUResult 和写回结果不受目标地址掩码影响。非法 JALR 功能码是否执行由 Controller 关闭 RegWrite/PCSrc；Datapath 仍按 opcode 提供组合地址。
+
+当 JALR 的 rs1=rd 时，目标在上升沿前使用旧 R1，时钟沿将链接值写入 rd；沿后的组合输出会根据新 R1 更新。这符合当前两读一写异步读取、同步写入的寄存器堆，未新增旁路。rd=x0 时链接写入被 RegFile 禁止。
+
+时序保持原约定：reset=1 的上升沿仅清零 rf(0)，x1–x31 保持，普通写入被屏蔽；reset=0 且 RegWrite=1 且 rd≠0 才写入 Result。无上升沿的复位电平脉冲不改变状态。x1–x31 的首次写入前内容未指定，测试先建立状态再观察。
+
+## 4. 子模块连接与当前整机范围
+
+| 子模块实例 | 类型与参数 | 连接规则 |
 | --- | --- | --- |
-| 0 | 0 | ALUResult。 |
-| 1 | 0 | PCPlus4。 |
-| 0 | 1 | ReadData。 |
-| 1 | 1 | ReadData，最终选择器优先选择内存。 |
+| `rf` | RegFile(xlen=32, registerCount=32) | clk/reset 接显式端口；WE3 接 RegWrite；WD3 接 Result；A1/A2/A3 直接取 rs1/rs2/rd，不减一。 |
+| `ext` | Extend(outputWidth=32) | 输入 Instr[31:7] 和 3 位 ImmSrc，输出 ImmExt。 |
+| `cmp` | Cmp(dataWidth=32) | 输入原始 R1/R2；Eq/LT/LTU 接三个比较输出。 |
+| `alu` | ALU(dataWidth=32) | SrcA/SrcB 来自操作数选择；独立 Funct3 与 ALUControl 传入；ALUResult 用于结果选择，IEUAdr 提供 RawIEUAdr。内部 Shifter 沿用第 5 轮接入。 |
 
-所有选通、运算、比较与读端口均为组合逻辑。时钟上升沿时，RegFile 按以下优先级更新：
+Datapath 不增加 PC、存储器、译码器或流水寄存器。LUI、AUIPC、JAL、JALR 的控制依赖已经完善的 Controller；独立模块测试也直接驱动所有输入组合以验证接口语义。
 
-1. reset=1：仅将 rf(0) 清零；其他寄存器保持，普通写入被抑制。
-2. reset=0 且 RegWrite=1 且 rd≠0：将 Result 写入 rf(rd)。
-3. 其他情况：全部寄存器保持。
+IEU 本轮只增加 Jump 内部连接：Controller.Jump 送往 Datapath.Jump，保持原生产外部端口。完整 MemRW/Funct3 交付仍留待下一轮 IEU。因为 Jump 现在被消费，IEU 与整机导出中的 Controller.io_Jump 不再是上一轮未连接的输出，需重新生成这些依赖 RTL。
 
-沿用用户已核验的完整 32 项寄存器及直接编号索引。x0 在首次 reset=1 的 clk 上升沿后保持零；x1–x31 没有初始值或复位值保证。读输出在写入上升沿后反映更新值，未添加写入旁路。
+当前整机已接通新写回与跳转地址数据通路，但旧 LSU 仍为字访存，不具备子字选择、字节写掩码或未对齐禁止访问；此轮不宣称整机已经支持表 7.1 的全部访存指令。复位保持现有行为：PC 与 x0 同步复位，数据 RAM 不清空；顶层在复位期间屏蔽存储写入的计划项仍留待对应整机轮次。
 
-## 4. 内部信号与子模块名称
+## 5. 内部信号与实际 RTL 名称
 
-以下八个信号在 Chisel 源码中均显式定义为 `Wire(UInt(config.xlen.W))`，当前宽度为 32 位；Datapath 自身未新增状态寄存器。
+十个数据功能信号显式定义为 `Wire(UInt(config.xlen.W))`，本阶段均为 32 位；JALR 识别为一个 Bool。它们不引入新状态。
 
-| 内部信号 | 功能 | 当前生成 Verilog 中的名称 / 对应位置 |
-| --- | --- | --- |
-| `ImmExt` | Extend 的符号扩展立即数。 | `ImmExt`，来自 `ext_io_ImmExt`。 |
-| `R1` | RegFile 第一个读端口值。 | `R1`，来自 `rf_io_RD1`。 |
-| `R2` | RegFile 第二个读端口值。 | `R2`，来自 `rf_io_RD2`。 |
-| `SrcA` | ALU A 操作数，选择 R1 或 PC。 | 别名经优化合并为 `alu_io_SrcA` 的赋值。 |
-| `SrcB` | ALU B 操作数，选择 R2 或 ImmExt。 | 别名经优化合并为 `alu_io_SrcB` 的赋值。 |
-| `ALUResult` | ALU 的功能结果。 | `ALUResult`，来自 `alu_io_ALUResult`。 |
-| `IEUResult` | ALUResult 与 PCPlus4 的选择结果。 | `IEUResult`。 |
-| `Result` | 最终寄存器写回数据。 | 别名经优化合并为 `rf_io_WD3` 的赋值。 |
+| Chisel 名称 | 位宽 | 定义 | 实际生成 RTL |
+| --- | --- | --- | --- |
+| `ImmExt` | 32 | 按 ImmSrc 从 Instr 扩展的立即数 | `ImmExt=ext_io_ImmExt` |
+| `R1` | 32 | rs1 读数 | `R1=rf_io_RD1` |
+| `R2` | 32 | rs2 读数 | `R2=rf_io_RD2` |
+| `SrcA` | 32 | ALUSrc[1] 选择 PC/R1 | 别名折叠为 `alu_io_SrcA` 的选择赋值 |
+| `SrcB` | 32 | ALUSrc[0] 选择 ImmExt/R2 | 别名折叠为 `alu_io_SrcB` 的选择赋值 |
+| `ALUResult` | 32 | ALU 功能结果，不进行目标清位 | `ALUResult=alu_io_ALUResult` |
+| `RawIEUAdr` | 32 | ALU 独立加减器结果 | `RawIEUAdr=alu_io_IEUAdr` |
+| `IsJalr` | 1 | Instr[6:0]=67 | `IsJalr` |
+| `AltResult` | 32 | Jump 选择 PCPlus4/ImmExt | `AltResult` |
+| `IEUResult` | 32 | ALUResultSrc 选择 AltResult/ALUResult | `IEUResult` |
+| `Result` | 32 | ResultSrc 选择 ReadData/IEUResult | 别名折叠为 `rf_io_WD3` 的选择赋值 |
 
-| 子模块实例名 | 类型 | 功能及连接 |
-| --- | --- | --- |
-| `rf` | `RegFile(config.xlen, 32)` | 32 项寄存器；clk/reset 接外部，WE3 接 RegWrite，WD3 接 Result。 |
-| `ext` | `Extend(config.xlen)` | 对 Instr[31:7] 按 ImmSrc 扩展立即数。 |
-| `cmp` | `Cmp(config.xlen)` | 比较 R1、R2，输出 Eq。 |
-| `alu` | `ALU(config.xlen)` | 接收 SrcA、SrcB、ALUControl、Funct3，输出 ALUResult 和 IEUAdr。 |
+目标掩码在当前生成 RTL 中表现为 32 位辅助线网 `_io_IEUAdr_T=RawIEUAdr & 32'hFFFFFFFE`，io_IEUAdr 再按 IsJalr 选择该值或 RawIEUAdr。该临时名字仅描述本次编译输出，不是稳定观察接口。
 
-当前 Verilog 还包含子模块端口连接线：`rf_clk`、`rf_reset`、`rf_io_WE3`、`rf_io_A1/A2/A3`、`rf_io_WD3`、`rf_io_RD1/RD2`，`ext_io_Instr/ImmSrc/ImmExt`，`cmp_io_R1/R2/Eq`，`alu_io_SrcA/SrcB/ALUControl/Funct3/ALUResult/IEUAdr`。位宽与对应子模块端口一致。未使用 `dontTouch` 强制保留别名；后续编译或综合可能进一步优化名称。
+子模块连接线采用 `rf_*、ext_*、cmp_*、alu_*`，位宽与对应端口一致；没有使用 dontTouch 强制保留别名。IEU 的 Chisel Jump Wire 在实际 RTL 中折叠为 `dp_io_Jump=c_io_Jump`；Controller.io_Jump 在依赖 RTL 中保留。本轮完整 Datapath 的 19 个生产端口保持，IEU/CPU 外部端口不变。
 
-## 5. 与原书的差异及验证结果
+## 6. 测试先行与模块验证
 
-原书将四个二选一选择器实例化为通用 `mux2`，本实现直接使用 Chisel `Mux`。原书的 RegFile 不接收 reset，本实现将 Datapath 的 reset 接入已核验的 RegFile，落实用户指定的 x0 同步清零行为。组合接口增加 `io_` 前缀，其余连接关系保持书中定义。
-
-验证日期：2026-10-03。工具链为 JDK 17、sbt 1.10.7、Scala 2.13.14、Chisel 3.6.1、chiseltest 0.6.2；功能仿真采用 Treadle 后端。
+先在已有公共接口的 ControlledDatapathHarness 上增加 LUI/JALR 行为测试，实际运行：
 
 ```bash
-./scripts/sbt-local.sh test 'runMain riscvsingle.GenerateDatapath'
+./scripts/sbt-local.sh 'testOnly riscvsingle.ieu.DatapathSpec'
 ```
 
-**实际结果：Datapath 新增 7 项测试全部通过；全项目 7 个套件、46 项测试全部通过。Datapath Verilog 已生成。**
+红阶段 **9 项中 7 通过、2 失败，退出码 1**；LUI 错误写回 PCPlus4，奇数 JALR 目标未清位，两个失败均为预期功能缺失。日志为 `target/datapath-round7-red.log`。随后新增 Jump 接口和相应测试，完善写回选择与目标处理。
+
+绿色验证命令：
+
+```bash
+./scripts/sbt-local.sh 'testOnly riscvsingle.ieu.DatapathSpec riscvsingle.ieu.IEUSpec'
+```
+
+**两个套件、20 项测试全部通过，退出码 0**：DatapathSpec 13 项、IEUSpec 7 项；日志 `target/datapath-round7-focused.log`。
 
 | 验证内容 | 实际覆盖 |
 | --- | --- |
-| 操作数、比较和存储数据 | 全部四种 ALUSrc；PC/ImmExt 相等而寄存器不等、寄存器相等而 PC/ImmExt 不等；WriteData 始终取 R2。 |
-| 写回选择 | 两个写回选择信号的四种组合；OR 结果为 15 而 IEUAdr 为 19；明确检查独立 Funct3 输入生效。 |
-| 立即数及地址 | I/S/B/J 各一个负立即数，分别在两种 PC 下检查目标；包含 32 位地址下溢回绕。 |
-| 时序、使能和复位 | 写入在上升沿生效；RegWrite=0 时保持；reset 优先于 x1 写入且保持 x1；向 x0 写入全 1 仍读出零。 |
-| 随机连续操作 | 固定种子 `0x215`，先通过正常写入初始化 x1–x31，再执行 200 个周期的随机指令位、立即数格式、操作数选择、ALU 功能、写回选择和写使能；独立软件寄存器模型检查 Eq、WriteData、IEUAdr，最后逐项检查全部 32 个寄存器的两个读端口。 |
-| 书中程序联调 | 连接已核验 Controller，执行 Code Example 2.16 程序；检查 19 条实际执行指令的 PC 顺序、两次存储及最终循环地址。地址 96 写入 7，地址 100 写入 25，最终 PC 为 0x50。 |
-| 接口与层次 | 检查全部 16 个生产端口及位宽、四个子模块实例名和复位连接。 |
+| 操作数与比较 | 全部四种 ALUSrc；原始寄存器相等/不等、−1 与 1 的正负顺序互换，确认 Eq/LT/LTU 与 WriteData 独立于所选 PC/ImmExt。 |
+| 写回组合 | ALUResultSrc、Jump、ResultSrc 的全部八种组合，结果来自 ALU、立即数、外部链接值或加载数据；加载最终优先。独立 Funct3 指定 OR=15，地址加法=19。 |
+| LUI/AUIPC | U 型立即数 0/1/7FFFF/80000/FFFFF，十六进制高 20 位；LUI 含 rd=x0 与非零寄存器，共 10 组；AUIPC 配合四种当前 PC 共 20 组，包含高位、奇数 PC 输入及回绕，PCPlus4 故意取不同值。 |
+| JAL | 正负偏移各一种、三个 PC、rd=x0/非零，共 12 组；目标与外部链接值独立，包含地址回绕。 |
+| JALR 与别名 | 八种 base/立即数组合 × 两种 Jump × 两种 ALUResultSrc × rd=x0/rs1，共 64 组；检查沿前旧源目标、沿后更新目标、最终寄存器值，覆盖奇偶、负偏移、回绕、位 1 保持及 ALU 写回不被清位。 |
+| opcode 掩码边界 | 十种 opcode × 两种 Jump 共 20 组，JALR 即使提供非法 Funct3 仍按 opcode 清位；其余 opcode 保留奇数地址，并确认算术结果原值写回。非法指令是否执行仍归 Controller。 |
+| 原立即数与复位 | 既有 I/S/B/J 负立即数、两种 PC 的地址测试继续通过；验证写入边沿、RegWrite=0、同步复位优先且非零寄存器保持、x0 禁止写入。 |
+| 随机模型 | 固定种子 0x215，先初始化 x1–x31，再运行 **640 周期**。ImmSrc=0–7 各 80 次，包括三种零立即数选择；214 次 JALR opcode，18 次高有效同步复位周期。随机操作数选择、八路 ALU 功能、Jump、替代/加载写回和使能。 |
+| 联调与接口 | 原书 Code Example 2.16 的 19 条执行指令、地址 96 写 7 与地址 100 写 25 保持；新增 IEU 单指令检查 LUI/AUIPC/JALR、rs1=rd 与 rd=x0，确认生产 Jump 接线。19 端口的方向/位宽、四个子模块实例与显式复位连接均核对。 |
 
-随机测试采用既有 Controller 可产生的 ALU 功能组合；ALUSrc 和写回选择则覆盖全部二态组合。测试还用 `CpuConfig(imemDepth=128, dmemDepth=256, resetVector=0x100)` 实例化 Datapath，确认有效的后续结构配置可以透传，但本模块不会据此生成 PC 或存储器。
+随机模型使用 BigInt 直接运算和比较，单独计算原始加减地址与目标；JALR 参考清位用整数除二再乘二，不复用硬件掩码表达式。每个周期在沿前和沿后各检查 Eq、LT、LTU、WriteData、IEUAdr 五个输出，共 **6,400 次输出断言**；最终检查全部 32 项寄存器的两个观察路径，共 64 次，总计 **6,464 次随机模型输出断言**。写回模型区分 AltResult 和 ALUResult，并在同步复位周期阻止非零寄存器更新。
 
-测试辅助 `DatapathHarness` 用于满足 chiseltest 的 Module 顶层要求，`ControlledDatapathHarness` 只提供 Controller 连接。书中程序的 PC 与内存由 Scala 测试模型维护，因此联调结果验证当前数据通路与控制器配合；完整 CPU 硬件尚待后续模块实现。未进行 FPGA 实现或时序分析。
+随机测试直接驱动数据通路控制，因此指令位模式不必对应合法的 Controller 译码；它验证独立接口与选择规则，不替代指令合法性测试。实例使用 `CpuConfig(imemDepth=128,dmemDepth=256,resetVector=0x100)` 验证配置透传，本模块仍不生成 PC 或 RAM。测试的参考计算与结果观察只依赖已写入的非零寄存器；原程序的 Scala 内存模型先建立存储状态，不依赖未初始化内容。
 
-单独生成可执行 `make generate-datapath SBT=./scripts/sbt-local.sh`，输出目录由 `DATAPATH_TARGET_DIR` 指定。`GenerateDatapath` 仅接受一个可选输出目录参数；硬件配置通过 Scala 构造参数传入。
+全工程最终回归命令：
 
-## 6. 核验停点
+```bash
+./scripts/sbt-local.sh test
+```
 
-本轮到此停止，Datapath 及配套资料保留在工作区等待核验。收到修改意见时，仅修改当前模块及配套资料并重新验证；核验通过并允许继续后，下一模块为 IEU。
+**13 个套件、109 项测试全部通过，退出码 0**，无失败或中止；既有模块、配置、原书程序及扩容程序回归均通过。日志 `target/datapath-round7-regression.log`。
+
+## 7. RTL 生成与整机验证
+
+实际生成命令：
+
+```bash
+./scripts/sbt-local.sh \
+  'runMain riscvsingle.GenerateDatapath generated/datapath' \
+  'runMain riscvsingle.GenerateIEU generated/ieu' \
+  'runMain riscvsingle.GenerateRiscvSingle 64 64 generated/riscv-single programs/riscvtest.memfile 0' \
+  'runMain riscvsingle.GenerateRiscvSingle 128 128 generated/riscv-single128 programs/rv32-configtest.memfile 0x100'
+make test-rtl
+```
+
+四个生成入口全部成功，退出码 0，日志 `target/datapath-round7-generate.log`；产物如下：
+
+| 配置 | RTL 路径 |
+| --- | --- |
+| Datapath | [generated/datapath/Datapath.v](../../generated/datapath/Datapath.v) |
+| IEU | [generated/ieu/IEU.v](../../generated/ieu/IEU.v) |
+| 默认 64 项 CPU、复位地址 0 | [generated/riscv-single/RiscvSingle.v](../../generated/riscv-single/RiscvSingle.v) |
+| 128 项 CPU、复位地址 0x100 | [generated/riscv-single128/RiscvSingle.v](../../generated/riscv-single128/RiscvSingle.v) |
+
+核对实际 RTL 的 19 个 Datapath 端口、Jump 接线、三级写回选择与 JALR 地址掩码；RegFile 之外没有新增状态，其他模块算法保持原实现。IEU/CPU 生产外部端口不变，Controller.Jump 在依赖 RTL 中保留并被消费。
+
+`make test-rtl` 直接编译重新生成的两份完整 CPU，使用 Verilator 5.036，对 book/expanded 配置各运行随机初值种子 1、17、2026，**六次全部 PASS，退出码 0**。book 每次执行 19 个周期、2 次存储；expanded 每次执行 13 个周期、5 次存储，均检查结束循环与同步复位。日志 `target/datapath-round7-rtl.log`。
+
+本轮 RTL 整机回归验证既有合法程序；LUI/AUIPC/JALR 的新增路径由 Datapath 定向/随机模型及 IEU 接线测试验证。完整表 7.1 的整机签名程序、子字存储检查和最终容量验收留待计划对应轮次，不把本轮结果解释为全部 RV32 整机能力已经完成。
+
+## 8. 核验停点
+
+**本轮停止，等待用户核验。** Datapath 源码、Jump 连接适配、测试、四份生成 RTL 和报告已交付。本轮改动保留在工作树；明确核验通过并允许继续后，提交本轮并进入第 8 轮 IEU，不自动连续实施其他模块。

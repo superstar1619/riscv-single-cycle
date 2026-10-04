@@ -7,6 +7,7 @@ import riscvsingle.config.CpuConfig
 final class DatapathIO(config: CpuConfig) extends Bundle {
   val Funct3 = Input(UInt(3.W))
   val ALUResultSrc = Input(Bool())
+  val Jump = Input(Bool())
   val ResultSrc = Input(Bool())
   val ALUSrc = Input(UInt(2.W))
   val RegWrite = Input(Bool())
@@ -38,8 +39,11 @@ final class Datapath(val config: CpuConfig = CpuConfig()) extends RawModule {
   val SrcA = Wire(UInt(config.xlen.W))
   val SrcB = Wire(UInt(config.xlen.W))
   val ALUResult = Wire(UInt(config.xlen.W))
+  val AltResult = Wire(UInt(config.xlen.W))
   val IEUResult = Wire(UInt(config.xlen.W))
   val Result = Wire(UInt(config.xlen.W))
+  val RawIEUAdr = Wire(UInt(config.xlen.W))
+  val IsJalr = Wire(Bool())
 
   val rf = Module(new RegFile(config.xlen, registerCount = 32))
   val ext = Module(new Extend(config.xlen))
@@ -73,9 +77,12 @@ final class Datapath(val config: CpuConfig = CpuConfig()) extends RawModule {
   alu.io.ALUControl := io.ALUControl
   alu.io.Funct3 := io.Funct3
   ALUResult := alu.io.ALUResult
-  io.IEUAdr := alu.io.IEUAdr
+  RawIEUAdr := alu.io.IEUAdr
+  IsJalr := io.Instr(6, 0) === 0x67.U
+  io.IEUAdr := Mux(IsJalr, RawIEUAdr & "hfffffffe".U(config.xlen.W), RawIEUAdr)
 
-  IEUResult := Mux(io.ALUResultSrc, io.PCPlus4, ALUResult)
+  AltResult := Mux(io.Jump, io.PCPlus4, ImmExt)
+  IEUResult := Mux(io.ALUResultSrc, AltResult, ALUResult)
   Result := Mux(io.ResultSrc, io.ReadData, IEUResult)
   io.WriteData := R2
 }

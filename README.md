@@ -4,7 +4,9 @@
 
 ## 当前交付
 
-**第七章第 6 轮：Controller。** 按教材主译码、分支逻辑和 ALU 译码结构完善 RV32 表 7.1 的控制；`ImmSrc` 为 3 位，接收完整 `Funct7` 及 `Eq/LT/LTU`，输出 `Jump` 和 `MemRW={MemRead,MemWrite}`。非法指令关闭写入和跳转。参数、控制编码、内部信号、测试和 RTL 路径见 [Controller 核验报告](docs/modules/05-controller.md)。**本轮停止，等待用户核验；明确通过并允许继续后才进入 Datapath。**
+**第七章第 7 轮：Datapath。** 按教材加入 `AltResult`，为 LUI 选择立即数、JAL/JALR 选择外部 `PCPlus4`；AUIPC 使用当前 PC 加 U 型立即数。JALR 目标仅清除位 0，并保留原始加减器结果与 ALU 写回结果。参数、控制编码、内部信号、测试和 RTL 路径见 [Datapath 核验报告](docs/modules/06-datapath.md)。**本轮停止，等待用户核验；明确通过并允许继续后才进入 IEU。**
+
+第 6 轮 Controller 已核验并按用户指示提交为 `ffbb866`：完善 RV32 表 7.1 译码、六种分支、完整 Funct7 合法性检查，以及 Jump/MemRW 控制，详见 [Controller 核验报告](docs/modules/05-controller.md)。本轮接入 Jump 与替代结果写回。
 
 第 5 轮 ALU 已核验并按用户指示提交为 `715b7b0`：补齐 XOR、SLTU、SLL、SRL、SRA 并接入教材漏斗 Shifter，保留独立加减地址输出，详见 [ALU 核验报告](docs/modules/03-alu.md)。本轮完善其指令控制。
 

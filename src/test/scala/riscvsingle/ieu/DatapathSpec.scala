@@ -41,6 +41,7 @@ private class ControlledDatapathHarness extends Module {
   controller.io.LTU := datapath.io.LTU
   datapath.io.Funct3 := io.Instr(14, 12)
   datapath.io.ALUResultSrc := controller.io.ALUResultSrc
+  datapath.io.Jump := controller.io.Jump
   datapath.io.ResultSrc := controller.io.ResultSrc
   datapath.io.ALUSrc := controller.io.ALUSrc
   datapath.io.RegWrite := controller.io.RegWrite
@@ -61,11 +62,22 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
   private def u32(value: BigInt): BigInt = value & mask
   private def fields(rs1: Int = 0, rs2: Int = 0, rd: Int = 0): BigInt =
     (BigInt(rs2) << 20) | (BigInt(rs1) << 15) | (BigInt(rd) << 7)
+  private def uType(immediate: Int, rd: Int, opcode: Int): BigInt =
+    (BigInt(immediate & 0xfffff) << 12) | fields(rd = rd) | opcode
+  private def iType(immediate: Int, rs1: Int, rd: Int, opcode: Int): BigInt =
+    (BigInt(immediate & 0xfff) << 20) | fields(rs1 = rs1, rd = rd) | opcode
+  private def jType(immediate: Int, rd: Int): BigInt = {
+    val imm = immediate & 0x1fffff
+    (BigInt((imm >> 20) & 1) << 31) | (BigInt((imm >> 1) & 1023) << 21) |
+      (BigInt((imm >> 11) & 1) << 20) | (BigInt((imm >> 12) & 255) << 12) |
+      fields(rd = rd) | 0x6f
+  }
 
   private def defaults(dut: DatapathHarness): Unit = {
     dut.reset.poke(false.B)
     dut.io.Funct3.poke(0.U)
     dut.io.ALUResultSrc.poke(false.B)
+    dut.io.Jump.poke(false.B)
     dut.io.ResultSrc.poke(false.B)
     dut.io.ALUSrc.poke(0.U)
     dut.io.RegWrite.poke(false.B)
@@ -98,6 +110,31 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   behavior of "Datapath"
 
+  it should "write the U immediate for LUI rather than the supplied PC link" in {
+    test(new ControlledDatapathHarness) { dut =>
+      dut.reset.poke(false.B)
+      dut.io.PC.poke(0x100.U)
+      dut.io.ReadData.poke(0.U)
+      dut.io.Instr.poke("h123450b7".U) // lui x1, 0x12345
+      dut.clock.step()
+      dut.io.Instr.poke("h00102023".U) // sw x1, 0(x0), observe x1 without another edge
+      dut.io.WriteData.expect("h12345000".U)
+    }
+  }
+
+  it should "clear only the low target bit for an odd JALR address" in {
+    test(new ControlledDatapathHarness) { dut =>
+      dut.reset.poke(false.B)
+      dut.io.PC.poke(0.U)
+      dut.io.ReadData.poke(0.U)
+      dut.io.Instr.poke("h00300093".U) // addi x1, x0, 3
+      dut.clock.step()
+      dut.io.Instr.poke("h00008067".U) // jalr x0, 0(x1)
+      dut.io.PCSrc.expect(true.B)
+      dut.io.IEUAdr.expect(2.U)
+    }
+  }
+
   it should "select all four operand pairs while comparing and storing original registers" in {
     test(new DatapathHarness) { dut =>
       defaults(dut)
@@ -112,11 +149,29 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.IEUAdr.expect(address.U)
         dut.io.WriteData.expect(7.U)
         dut.io.Eq.expect(false.B)
+        dut.io.LT.expect(false.B)
+        dut.io.LTU.expect(false.B)
       }
       dut.io.Instr.poke(fields(rs1 = 2, rs2 = 2).U)
       dut.io.PC.poke(100.U)
       dut.io.Eq.expect(true.B) // Selected PC/ImmExt differ, original registers equal.
+      dut.io.LT.expect(false.B)
+      dut.io.LTU.expect(false.B)
       dut.io.WriteData.expect(7.U)
+      for ((a, b, lt, ltu) <- Seq((mask, BigInt(1), true, false),
+          (BigInt(1), mask, false, true))) {
+        write(dut, 1, a)
+        write(dut, 2, b)
+        dut.io.Instr.poke(fields(rs1 = 1, rs2 = 2).U)
+        dut.io.PC.poke(2.U)
+        for (selection <- 0 until 4) {
+          dut.io.ALUSrc.poke(selection.U)
+          dut.io.Eq.expect(false.B)
+          dut.io.LT.expect(lt.B)
+          dut.io.LTU.expect(ltu.B)
+          dut.io.WriteData.expect(b.U)
+        }
+      }
     }
   }
 
@@ -125,20 +180,22 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
       defaults(dut)
       write(dut, 1, 12)
       write(dut, 2, 7)
-      for (link <- Seq(false, true); memory <- Seq(false, true)) {
+      for (alternate <- Seq(false, true); jump <- Seq(false, true); memory <- Seq(false, true)) {
         defaults(dut)
         // Instruction funct3 bits are zero; the explicit port requests OR.
         dut.io.Instr.poke(fields(rs1 = 1, rs2 = 2, rd = 3).U)
         dut.io.Funct3.poke(6.U)
         dut.io.ALUControl.poke(1.U)
-        dut.io.ALUResultSrc.poke(link.B)
+        dut.io.ALUResultSrc.poke(alternate.B)
+        dut.io.Jump.poke(jump.B)
         dut.io.ResultSrc.poke(memory.B)
         dut.io.PCPlus4.poke(0x104.U)
         dut.io.ReadData.poke("hdeadbeef".U)
         dut.io.RegWrite.poke(true.B)
         dut.io.IEUAdr.expect(19.U) // Address uses sum even when ALUResult is OR.
         dut.clock.step()
-        val expected = if (memory) BigInt("deadbeef", 16) else if (link) BigInt(0x104) else BigInt(15)
+        val expected = if (memory) BigInt("deadbeef", 16)
+          else if (alternate) { if (jump) BigInt(0x104) else BigInt(2) } else BigInt(15)
         expectRegister(dut, 3, expected)
       }
     }
@@ -160,6 +217,114 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.ImmSrc.poke(format.U)
         dut.io.PC.poke(pc.U)
         dut.io.IEUAdr.expect(u32(BigInt(pc) + immediate).U)
+      }
+    }
+  }
+
+  it should "select U immediates for LUI and current PC plus U immediates for AUIPC" in {
+    test(new DatapathHarness) { dut =>
+      defaults(dut)
+      for (index <- 1 until 32) write(dut, index, BigInt(0x100 + index))
+      val immediates = Seq(0, 1, 0x7ffff, 0x80000, 0xfffff)
+      for (immediate <- immediates; rd <- Seq(0, 3)) {
+        defaults(dut)
+        dut.io.Instr.poke(uType(immediate, rd, 0x37).U)
+        dut.io.ImmSrc.poke(4.U)
+        dut.io.ALUResultSrc.poke(true.B)
+        dut.io.Jump.poke(false.B)
+        dut.io.PC.poke(0x80.U)
+        dut.io.PCPlus4.poke("hdeadbeef".U)
+        dut.io.RegWrite.poke(true.B)
+        dut.clock.step()
+        expectRegister(dut, rd, if (rd == 0) BigInt(0) else BigInt(immediate) << 12)
+      }
+      for (immediate <- immediates;
+          pc <- Seq(BigInt(0x120), mask - 7, BigInt("80000001", 16), BigInt(1))) {
+        defaults(dut)
+        dut.io.Instr.poke(uType(immediate, 3, 0x17).U)
+        dut.io.ImmSrc.poke(4.U)
+        dut.io.ALUSrc.poke(3.U)
+        dut.io.PC.poke(pc.U)
+        dut.io.PCPlus4.poke("hdeadbeef".U)
+        dut.io.RegWrite.poke(true.B)
+        val expected = u32(pc + (BigInt(immediate) << 12))
+        dut.io.IEUAdr.expect(expected.U)
+        dut.clock.step()
+        expectRegister(dut, 3, expected)
+      }
+    }
+  }
+
+  it should "write supplied JAL links independently of positive and negative targets" in {
+    test(new DatapathHarness) { dut =>
+      defaults(dut)
+      for (index <- 1 until 32) write(dut, index, BigInt(index))
+      for (immediate <- Seq(16, -16); pc <- Seq(BigInt(0), BigInt(0x100), mask - 3);
+          rd <- Seq(0, 3)) {
+        defaults(dut)
+        val link = u32(pc + 0x222)
+        dut.io.Instr.poke(jType(immediate, rd).U)
+        dut.io.ImmSrc.poke(3.U)
+        dut.io.ALUSrc.poke(3.U)
+        dut.io.Jump.poke(true.B)
+        dut.io.ALUResultSrc.poke(true.B)
+        dut.io.PC.poke(pc.U)
+        dut.io.PCPlus4.poke(link.U)
+        dut.io.RegWrite.poke(true.B)
+        dut.io.IEUAdr.expect(u32(pc + immediate).U)
+        dut.clock.step()
+        expectRegister(dut, rd, if (rd == 0) BigInt(0) else link)
+      }
+    }
+  }
+
+  it should "clear JALR target bit zero without changing arithmetic writeback or source aliases" in {
+    test(new DatapathHarness) { dut =>
+      defaults(dut)
+      for (index <- 1 until 32) write(dut, index, BigInt(index))
+      val operands = Seq((BigInt(1), 0), (BigInt(3), 0), (BigInt(4), -1),
+        (BigInt(1), -2), (mask, 3), (BigInt("80000000", 16), -1),
+        (BigInt(5), 2), (BigInt(4), 2))
+      for ((base, immediate) <- operands; jump <- Seq(false, true);
+          alternate <- Seq(false, true); rd <- Seq(0, 1)) {
+        defaults(dut)
+        write(dut, 1, base)
+        dut.io.Instr.poke(iType(immediate, 1, rd, 0x67).U)
+        dut.io.ALUSrc.poke(1.U)
+        dut.io.Jump.poke(jump.B)
+        dut.io.ALUResultSrc.poke(alternate.B)
+        dut.io.PC.poke(0x500.U)
+        dut.io.PCPlus4.poke(0xabc.U)
+        dut.io.RegWrite.poke(true.B)
+        val raw = u32(base + immediate)
+        val result = if (alternate) { if (jump) BigInt(0xabc) else u32(BigInt(immediate)) } else raw
+        dut.io.IEUAdr.expect(((raw / 2) * 2).U)
+        dut.clock.step()
+        val newBase = if (rd == 1) result else base
+        val newRaw = u32(newBase + immediate)
+        dut.io.IEUAdr.expect(((newRaw / 2) * 2).U)
+        expectRegister(dut, rd, if (rd == 0) BigInt(0) else result)
+      }
+    }
+  }
+
+  it should "mask by JALR opcode alone and preserve odd addresses for every other opcode" in {
+    test(new DatapathHarness) { dut =>
+      defaults(dut)
+      write(dut, 1, 1)
+      write(dut, 2, 2)
+      for (opcode <- Seq(0x67, 0x6f, 0x63, 0x03, 0x23, 0x37, 0x17, 0x33, 0x13, 0x00);
+          jump <- Seq(false, true)) {
+        defaults(dut)
+        // Even an illegal JALR funct3 is masked: opcode alone is this datapath's contract.
+        dut.io.Instr.poke((fields(rs1 = 1, rs2 = 2, rd = 3) | (BigInt(7) << 12) | opcode).U)
+        dut.io.Funct3.poke(6.U) // OR result is 3; the adder address is also odd.
+        dut.io.ALUControl.poke(1.U)
+        dut.io.Jump.poke(jump.B)
+        dut.io.RegWrite.poke(true.B)
+        dut.io.IEUAdr.expect((if (opcode == 0x67) 2 else 3).U)
+        dut.clock.step()
+        expectRegister(dut, 3, 3)
       }
     }
   }
@@ -212,14 +377,18 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
             (bits(30, 25) << 5) | (bits(11, 8) << 1), 13)
           case 3 => signed((bits(31, 31) << 20) | (bits(19, 12) << 12) |
             (bits(20, 20) << 11) | (bits(30, 21) << 1), 21)
+          case 4 => instruction & BigInt("fffff000", 16)
+          case _ => BigInt(0)
         }
       }
-      for (_ <- 0 until 200) {
-        val instruction = BigInt(32, random)
+      for (iteration <- 0 until 640) {
+        val opcode = if (iteration % 3 == 0) 0x67
+          else Seq(0x03, 0x23, 0x63, 0x6f, 0x37, 0x17, 0x33, 0x13)(random.nextInt(8))
+        val instruction = (BigInt(32, random) & (mask ^ 127)) | opcode
         val rs1 = ((instruction >> 15) & 31).toInt
         val rs2 = ((instruction >> 20) & 31).toInt
         val rd = ((instruction >> 7) & 31).toInt
-        val format = random.nextInt(4)
+        val format = iteration % 8
         val selection = random.nextInt(4)
         val funct3 = random.nextInt(8)
         val aluOp = random.nextBoolean()
@@ -228,14 +397,16 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
         val pc = BigInt(32, random)
         val linkAddress = BigInt(32, random)
         val readData = BigInt(32, random)
-        val link = random.nextBoolean()
+        val alternate = random.nextBoolean()
+        val jump = random.nextBoolean()
         val memory = random.nextBoolean()
+        val resetting = iteration % 37 == 0
         val enable = random.nextBoolean()
         val a = if ((selection & 2) != 0) pc else registers(rs1)
         val b = if ((selection & 1) != 0) u32(immediate(instruction, format)) else registers(rs2)
-        val address = u32(if (sub) a - b else a + b)
+        val rawAddress = u32(if (sub) a - b else a + b)
         val result = (if (aluOp) funct3 else 0) match {
-          case 0 => address
+          case 0 => rawAddress
           case 1 => u32(a << (b & 31).toInt)
           case 2 => if (signed(a, 32) < signed(b, 32)) BigInt(1) else BigInt(0)
           case 3 => if (a < b) BigInt(1) else BigInt(0)
@@ -252,14 +423,32 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.PC.poke(pc.U)
         dut.io.PCPlus4.poke(linkAddress.U)
         dut.io.ReadData.poke(readData.U)
-        dut.io.ALUResultSrc.poke(link.B)
+        dut.io.ALUResultSrc.poke(alternate.B)
+        dut.io.Jump.poke(jump.B)
         dut.io.ResultSrc.poke(memory.B)
         dut.io.RegWrite.poke(enable.B)
-        dut.io.Eq.expect((registers(rs1) == registers(rs2)).B)
-        dut.io.WriteData.expect(registers(rs2).U)
-        dut.io.IEUAdr.expect(address.U)
+        dut.reset.poke(resetting.B)
+        def observe(): Unit = {
+          val r1 = registers(rs1)
+          val r2 = registers(rs2)
+          val sourceA = if ((selection & 2) != 0) pc else r1
+          val sourceB = if ((selection & 1) != 0) u32(immediate(instruction, format)) else r2
+          val raw = u32(if (sub) sourceA - sourceB else sourceA + sourceB)
+          val target = if (opcode == 0x67) (raw / 2) * 2 else raw
+          dut.io.Eq.expect((r1 == r2).B)
+          dut.io.LT.expect((signed(r1, 32) < signed(r2, 32)).B)
+          dut.io.LTU.expect((r1 < r2).B)
+          dut.io.WriteData.expect(r2.U)
+          dut.io.IEUAdr.expect(target.U)
+        }
+        observe()
         dut.clock.step()
-        if (enable && rd != 0) registers(rd) = if (memory) readData else if (link) linkAddress else result
+        if (!resetting && enable && rd != 0) {
+          registers(rd) = if (memory) readData
+            else if (alternate) { if (jump) linkAddress else u32(immediate(instruction, format)) }
+            else result
+        }
+        observe()
       }
       for (index <- 0 until 32) expectRegister(dut, index, registers(index))
     }
@@ -310,6 +499,7 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
     }.toMap
     assert(ports == Map("clk" -> ("input", 1), "reset" -> ("input", 1),
       "io_Funct3" -> ("input", 3), "io_ALUResultSrc" -> ("input", 1),
+      "io_Jump" -> ("input", 1),
       "io_ResultSrc" -> ("input", 1), "io_ALUSrc" -> ("input", 2),
       "io_RegWrite" -> ("input", 1), "io_ImmSrc" -> ("input", 3),
       "io_ALUControl" -> ("input", 2), "io_Eq" -> ("output", 1),
