@@ -899,6 +899,8 @@ module IEU(
   input  [31:0] io_PCPlus4, // @[src/main/scala/riscvsingle/ieu/IEU.scala 29:14]
   output        io_PCSrc, // @[src/main/scala/riscvsingle/ieu/IEU.scala 29:14]
   output        io_MemWrite, // @[src/main/scala/riscvsingle/ieu/IEU.scala 29:14]
+  output [1:0]  io_MemRW, // @[src/main/scala/riscvsingle/ieu/IEU.scala 29:14]
+  output [2:0]  io_Funct3, // @[src/main/scala/riscvsingle/ieu/IEU.scala 29:14]
   output [31:0] io_IEUAdr, // @[src/main/scala/riscvsingle/ieu/IEU.scala 29:14]
   output [31:0] io_WriteData, // @[src/main/scala/riscvsingle/ieu/IEU.scala 29:14]
   input  [31:0] io_ReadData // @[src/main/scala/riscvsingle/ieu/IEU.scala 29:14]
@@ -978,6 +980,8 @@ module IEU(
   );
   assign io_PCSrc = c_io_PCSrc; // @[src/main/scala/riscvsingle/ieu/IEU.scala 65:12]
   assign io_MemWrite = MemRW[0]; // @[src/main/scala/riscvsingle/ieu/IEU.scala 64:23]
+  assign io_MemRW = c_io_MemRW; // @[src/main/scala/riscvsingle/ieu/IEU.scala 41:19 61:9]
+  assign io_Funct3 = io_Instr[14:12]; // @[src/main/scala/riscvsingle/ieu/IEU.scala 48:21]
   assign io_IEUAdr = dp_io_IEUAdr; // @[src/main/scala/riscvsingle/ieu/IEU.scala 84:13]
   assign io_WriteData = dp_io_WriteData; // @[src/main/scala/riscvsingle/ieu/IEU.scala 85:16]
   assign c_io_Op = io_Instr[6:0]; // @[src/main/scala/riscvsingle/ieu/IEU.scala 47:22]
@@ -1001,35 +1005,126 @@ module IEU(
   assign dp_io_Instr = io_Instr; // @[src/main/scala/riscvsingle/ieu/IEU.scala 82:15]
   assign dp_io_ReadData = io_ReadData; // @[src/main/scala/riscvsingle/ieu/IEU.scala 83:18]
 endmodule
-module LSU(
-  input         clk, // @[src/main/scala/riscvsingle/lsu/LSU.scala 21:15]
-  input         io_MemWrite, // @[src/main/scala/riscvsingle/lsu/LSU.scala 22:14]
-  input  [31:0] io_IEUAdr, // @[src/main/scala/riscvsingle/lsu/LSU.scala 22:14]
-  input  [31:0] io_WriteData, // @[src/main/scala/riscvsingle/lsu/LSU.scala 22:14]
-  output [31:0] io_ReadData // @[src/main/scala/riscvsingle/lsu/LSU.scala 22:14]
+module SwByteMask(
+  input  [2:0] io_Funct3, // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 20:14]
+  input  [1:0] io_ByteOffset, // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 20:14]
+  output [3:0] io_ByteMask // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 20:14]
+);
+  wire [3:0] _AccessBytes_T_1 = 3'h0 == io_Funct3 ? 4'h1 : 4'h0; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [3:0] _AccessBytes_T_3 = 3'h1 == io_Funct3 ? 4'h2 : _AccessBytes_T_1; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [3:0] AccessBytes = 3'h2 == io_Funct3 ? 4'h4 : _AccessBytes_T_3; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [3:0] _BaseMask_T_1 = 4'h1 == AccessBytes ? 4'h1 : 4'h0; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [3:0] _BaseMask_T_3 = 4'h2 == AccessBytes ? 4'h3 : _BaseMask_T_1; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [3:0] BaseMask = 4'h4 == AccessBytes ? 4'hf : _BaseMask_T_3; // @[src/main/scala/chisel3/util/Mux.scala 77:13]
+  wire [3:0] _Aligned_T_1 = AccessBytes - 4'h1; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 39:44]
+  wire [3:0] _GEN_0 = {{2'd0}, io_ByteOffset}; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 39:29]
+  wire [3:0] _Aligned_T_2 = _GEN_0 & _Aligned_T_1; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 39:29]
+  wire  Aligned = _Aligned_T_2 == 4'h0; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 39:52]
+  wire [6:0] _GEN_1 = {{3'd0}, BaseMask}; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 41:15]
+  wire [6:0] _ByteMask_T_2 = _GEN_1 << io_ByteOffset; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 41:15]
+  assign io_ByteMask = AccessBytes != 4'h0 & Aligned ? _ByteMask_T_2[3:0] : 4'h0; // @[src/main/scala/riscvsingle/lsu/SwByteMask.scala 40:18]
+endmodule
+module SubwordWrite(
+  input  [31:0] io_WriteData, // @[src/main/scala/riscvsingle/lsu/SubwordWrite.scala 23:14]
+  input  [2:0]  io_Funct3, // @[src/main/scala/riscvsingle/lsu/SubwordWrite.scala 23:14]
+  output [31:0] io_WriteDataWord // @[src/main/scala/riscvsingle/lsu/SubwordWrite.scala 23:14]
+);
+  wire [31:0] ByteCopies = {io_WriteData[7:0],io_WriteData[7:0],io_WriteData[7:0],io_WriteData[7:0]}; // @[src/main/scala/riscvsingle/lsu/SubwordWrite.scala 30:21]
+  wire [31:0] HalfwordCopies = {io_WriteData[15:0],io_WriteData[15:0]}; // @[src/main/scala/riscvsingle/lsu/SubwordWrite.scala 31:25]
+  wire [31:0] _io_WriteDataWord_T_1 = 3'h0 == io_Funct3 ? ByteCopies : 32'h0; // @[src/main/scala/riscvsingle/lsu/SubwordWrite.scala 42:61]
+  wire [31:0] _io_WriteDataWord_T_3 = 3'h1 == io_Funct3 ? HalfwordCopies : _io_WriteDataWord_T_1; // @[src/main/scala/riscvsingle/lsu/SubwordWrite.scala 42:61]
+  assign io_WriteDataWord = 3'h2 == io_Funct3 ? io_WriteData : _io_WriteDataWord_T_3; // @[src/main/scala/riscvsingle/lsu/SubwordWrite.scala 42:61]
+endmodule
+module DTIM(
+  input         clk, // @[src/main/scala/riscvsingle/lsu/DTIM.scala 28:15]
+  input  [31:0] io_Adr, // @[src/main/scala/riscvsingle/lsu/DTIM.scala 29:14]
+  input         io_MemRead, // @[src/main/scala/riscvsingle/lsu/DTIM.scala 29:14]
+  input         io_MemWrite, // @[src/main/scala/riscvsingle/lsu/DTIM.scala 29:14]
+  input  [31:0] io_WriteDataWord, // @[src/main/scala/riscvsingle/lsu/DTIM.scala 29:14]
+  input  [3:0]  io_ByteMask, // @[src/main/scala/riscvsingle/lsu/DTIM.scala 29:14]
+  output [31:0] io_ReadDataWord // @[src/main/scala/riscvsingle/lsu/DTIM.scala 29:14]
 );
 `ifdef RANDOMIZE_MEM_INIT
   reg [31:0] _RAND_0;
+  reg [31:0] _RAND_1;
+  reg [31:0] _RAND_2;
+  reg [31:0] _RAND_3;
 `endif // RANDOMIZE_MEM_INIT
-  reg [31:0] RAM [0:127]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:33]
-  wire  RAM_io_ReadData_MPORT_en; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:33]
-  wire [6:0] RAM_io_ReadData_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:33]
-  wire [31:0] RAM_io_ReadData_MPORT_data; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:33]
-  wire [31:0] RAM_MPORT_data; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:33]
-  wire [6:0] RAM_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:33]
-  wire  RAM_MPORT_mask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:33]
-  wire  RAM_MPORT_en; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:33]
-  assign RAM_io_ReadData_MPORT_en = 1'h1;
-  assign RAM_io_ReadData_MPORT_addr = io_IEUAdr[8:2];
-  assign RAM_io_ReadData_MPORT_data = RAM[RAM_io_ReadData_MPORT_addr]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:33]
-  assign RAM_MPORT_data = io_WriteData;
-  assign RAM_MPORT_addr = io_IEUAdr[8:2];
-  assign RAM_MPORT_mask = 1'h1;
-  assign RAM_MPORT_en = io_MemWrite;
-  assign io_ReadData = RAM_io_ReadData_MPORT_data; // @[src/main/scala/riscvsingle/lsu/LSU.scala 29:15]
+  reg [7:0] RAM_0 [0:127]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_0_ReadBytes_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_0_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [7:0] RAM_0_ReadBytes_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [7:0] RAM_0_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_0_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_0_MPORT_mask; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_0_MPORT_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  reg [7:0] RAM_1 [0:127]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_1_ReadBytes_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_1_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [7:0] RAM_1_ReadBytes_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [7:0] RAM_1_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_1_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_1_MPORT_mask; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_1_MPORT_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  reg [7:0] RAM_2 [0:127]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_2_ReadBytes_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_2_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [7:0] RAM_2_ReadBytes_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [7:0] RAM_2_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_2_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_2_MPORT_mask; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_2_MPORT_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  reg [7:0] RAM_3 [0:127]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_3_ReadBytes_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_3_ReadBytes_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [7:0] RAM_3_ReadBytes_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [7:0] RAM_3_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [6:0] RAM_3_MPORT_addr; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_3_MPORT_mask; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire  RAM_3_MPORT_en; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  wire [31:0] _io_ReadDataWord_T = {RAM_3_ReadBytes_data,RAM_2_ReadBytes_data,RAM_1_ReadBytes_data,RAM_0_ReadBytes_data}
+    ; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 39:48]
+  assign RAM_0_ReadBytes_en = 1'h1;
+  assign RAM_0_ReadBytes_addr = io_Adr[8:2];
+  assign RAM_0_ReadBytes_data = RAM_0[RAM_0_ReadBytes_addr]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  assign RAM_0_MPORT_data = io_WriteDataWord[7:0];
+  assign RAM_0_MPORT_addr = io_Adr[8:2];
+  assign RAM_0_MPORT_mask = io_ByteMask[0];
+  assign RAM_0_MPORT_en = io_MemWrite;
+  assign RAM_1_ReadBytes_en = 1'h1;
+  assign RAM_1_ReadBytes_addr = io_Adr[8:2];
+  assign RAM_1_ReadBytes_data = RAM_1[RAM_1_ReadBytes_addr]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  assign RAM_1_MPORT_data = io_WriteDataWord[15:8];
+  assign RAM_1_MPORT_addr = io_Adr[8:2];
+  assign RAM_1_MPORT_mask = io_ByteMask[1];
+  assign RAM_1_MPORT_en = io_MemWrite;
+  assign RAM_2_ReadBytes_en = 1'h1;
+  assign RAM_2_ReadBytes_addr = io_Adr[8:2];
+  assign RAM_2_ReadBytes_data = RAM_2[RAM_2_ReadBytes_addr]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  assign RAM_2_MPORT_data = io_WriteDataWord[23:16];
+  assign RAM_2_MPORT_addr = io_Adr[8:2];
+  assign RAM_2_MPORT_mask = io_ByteMask[2];
+  assign RAM_2_MPORT_en = io_MemWrite;
+  assign RAM_3_ReadBytes_en = 1'h1;
+  assign RAM_3_ReadBytes_addr = io_Adr[8:2];
+  assign RAM_3_ReadBytes_data = RAM_3[RAM_3_ReadBytes_addr]; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+  assign RAM_3_MPORT_data = io_WriteDataWord[31:24];
+  assign RAM_3_MPORT_addr = io_Adr[8:2];
+  assign RAM_3_MPORT_mask = io_ByteMask[3];
+  assign RAM_3_MPORT_en = io_MemWrite;
+  assign io_ReadDataWord = io_MemRead ? _io_ReadDataWord_T : 32'h0; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 39:25]
   always @(posedge clk) begin
-    if (RAM_MPORT_en & RAM_MPORT_mask) begin
-      RAM[RAM_MPORT_addr] <= RAM_MPORT_data; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:33]
+    if (RAM_0_MPORT_en & RAM_0_MPORT_mask) begin
+      RAM_0[RAM_0_MPORT_addr] <= RAM_0_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+    end
+    if (RAM_1_MPORT_en & RAM_1_MPORT_mask) begin
+      RAM_1[RAM_1_MPORT_addr] <= RAM_1_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+    end
+    if (RAM_2_MPORT_en & RAM_2_MPORT_mask) begin
+      RAM_2[RAM_2_MPORT_addr] <= RAM_2_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
+    end
+    if (RAM_3_MPORT_en & RAM_3_MPORT_mask) begin
+      RAM_3[RAM_3_MPORT_addr] <= RAM_3_MPORT_data; // @[src/main/scala/riscvsingle/lsu/DTIM.scala 37:33]
     end
   end
 // Register and memory initialization
@@ -1070,7 +1165,16 @@ initial begin
 `ifdef RANDOMIZE_MEM_INIT
   _RAND_0 = {1{`RANDOM}};
   for (initvar = 0; initvar < 128; initvar = initvar+1)
-    RAM[initvar] = _RAND_0[31:0];
+    RAM_0[initvar] = _RAND_0[7:0];
+  _RAND_1 = {1{`RANDOM}};
+  for (initvar = 0; initvar < 128; initvar = initvar+1)
+    RAM_1[initvar] = _RAND_1[7:0];
+  _RAND_2 = {1{`RANDOM}};
+  for (initvar = 0; initvar < 128; initvar = initvar+1)
+    RAM_2[initvar] = _RAND_2[7:0];
+  _RAND_3 = {1{`RANDOM}};
+  for (initvar = 0; initvar < 128; initvar = initvar+1)
+    RAM_3[initvar] = _RAND_3[7:0];
 `endif // RANDOMIZE_MEM_INIT
   `endif // RANDOMIZE
 end // initial
@@ -1078,6 +1182,99 @@ end // initial
 `FIRRTL_AFTER_INITIAL
 `endif
 `endif // SYNTHESIS
+endmodule
+module SubwordRead(
+  input  [31:0] io_ReadDataWord, // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 24:14]
+  input  [1:0]  io_ByteOffset, // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 24:14]
+  input  [2:0]  io_Funct3, // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 24:14]
+  output [31:0] io_ReadData // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 24:14]
+);
+  wire [15:0] SelectedHalfword = io_ByteOffset[1] ? io_ReadDataWord[31:16] : io_ReadDataWord[15:0]; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 36:26]
+  wire [7:0] SelectedByte = io_ByteOffset[0] ? SelectedHalfword[15:8] : SelectedHalfword[7:0]; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 37:22]
+  wire [7:0] _T = io_ByteOffset[0] ? SelectedHalfword[15:8] : SelectedHalfword[7:0]; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 41:30]
+  wire [31:0] _T_2 = {{24{_T[7]}},_T}; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 41:52]
+  wire [15:0] _T_3 = io_ByteOffset[1] ? io_ReadDataWord[31:16] : io_ReadDataWord[15:0]; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 42:34]
+  wire [31:0] _T_5 = {{16{_T_3[15]}},_T_3}; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 42:56]
+  wire [31:0] _T_8 = {{24'd0}, SelectedByte}; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 44:33]
+  wire [31:0] _T_9 = {{16'd0}, SelectedHalfword}; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 45:37]
+  wire [31:0] _io_ReadData_T_1 = 3'h0 == io_Funct3 ? _T_2 : 32'h0; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
+  wire [31:0] _io_ReadData_T_3 = 3'h1 == io_Funct3 ? _T_5 : _io_ReadData_T_1; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
+  wire [31:0] _io_ReadData_T_5 = 3'h2 == io_Funct3 ? io_ReadDataWord : _io_ReadData_T_3; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
+  wire [31:0] _io_ReadData_T_7 = 3'h4 == io_Funct3 ? _T_8 : _io_ReadData_T_5; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
+  assign io_ReadData = 3'h5 == io_Funct3 ? _T_9 : _io_ReadData_T_7; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
+endmodule
+module LSU(
+  input         clk, // @[src/main/scala/riscvsingle/lsu/LSU.scala 23:15]
+  input         io_MemWrite, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
+  input  [1:0]  io_MemRW, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
+  input  [2:0]  io_Funct3, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
+  input  [31:0] io_IEUAdr, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
+  input  [31:0] io_WriteData, // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
+  output [31:0] io_ReadData // @[src/main/scala/riscvsingle/lsu/LSU.scala 24:14]
+);
+  wire [2:0] swByteMask_io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 39:26]
+  wire [1:0] swByteMask_io_ByteOffset; // @[src/main/scala/riscvsingle/lsu/LSU.scala 39:26]
+  wire [3:0] swByteMask_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 39:26]
+  wire [31:0] subwordWrite_io_WriteData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:28]
+  wire [2:0] subwordWrite_io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:28]
+  wire [31:0] subwordWrite_io_WriteDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:28]
+  wire  dtim_clk; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
+  wire [31:0] dtim_io_Adr; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
+  wire  dtim_io_MemRead; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
+  wire  dtim_io_MemWrite; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
+  wire [31:0] dtim_io_WriteDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
+  wire [3:0] dtim_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
+  wire [31:0] dtim_io_ReadDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
+  wire [31:0] subwordRead_io_ReadDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:27]
+  wire [1:0] subwordRead_io_ByteOffset; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:27]
+  wire [2:0] subwordRead_io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:27]
+  wire [31:0] subwordRead_io_ReadData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:27]
+  wire [1:0] ByteOffset = io_IEUAdr[1:0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:26]
+  wire  HalfwordAligned = ~ByteOffset[0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 28:25]
+  wire  WordAligned = ByteOffset == 2'h0; // @[src/main/scala/riscvsingle/lsu/LSU.scala 29:32]
+  wire  _LoadAllowed_T_3 = 3'h1 == io_Funct3 ? HalfwordAligned : 3'h0 == io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 31:47]
+  wire  _LoadAllowed_T_5 = 3'h2 == io_Funct3 ? WordAligned : _LoadAllowed_T_3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 31:47]
+  wire  LoadAllowed = 3'h5 == io_Funct3 ? HalfwordAligned : 3'h4 == io_Funct3 | _LoadAllowed_T_5; // @[src/main/scala/riscvsingle/lsu/LSU.scala 31:47]
+  wire [3:0] ByteMask = swByteMask_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 50:22 55:12]
+  SwByteMask swByteMask ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 39:26]
+    .io_Funct3(swByteMask_io_Funct3),
+    .io_ByteOffset(swByteMask_io_ByteOffset),
+    .io_ByteMask(swByteMask_io_ByteMask)
+  );
+  SubwordWrite subwordWrite ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 40:28]
+    .io_WriteData(subwordWrite_io_WriteData),
+    .io_Funct3(subwordWrite_io_Funct3),
+    .io_WriteDataWord(subwordWrite_io_WriteDataWord)
+  );
+  DTIM dtim ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 41:20]
+    .clk(dtim_clk),
+    .io_Adr(dtim_io_Adr),
+    .io_MemRead(dtim_io_MemRead),
+    .io_MemWrite(dtim_io_MemWrite),
+    .io_WriteDataWord(dtim_io_WriteDataWord),
+    .io_ByteMask(dtim_io_ByteMask),
+    .io_ReadDataWord(dtim_io_ReadDataWord)
+  );
+  SubwordRead subwordRead ( // @[src/main/scala/riscvsingle/lsu/LSU.scala 42:27]
+    .io_ReadDataWord(subwordRead_io_ReadDataWord),
+    .io_ByteOffset(subwordRead_io_ByteOffset),
+    .io_Funct3(subwordRead_io_Funct3),
+    .io_ReadData(subwordRead_io_ReadData)
+  );
+  assign io_ReadData = subwordRead_io_ReadData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 68:15]
+  assign swByteMask_io_Funct3 = io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 44:24]
+  assign swByteMask_io_ByteOffset = io_IEUAdr[1:0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:26]
+  assign subwordWrite_io_WriteData = io_WriteData; // @[src/main/scala/riscvsingle/lsu/LSU.scala 47:29]
+  assign subwordWrite_io_Funct3 = io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 46:26]
+  assign dtim_clk = clk; // @[src/main/scala/riscvsingle/lsu/LSU.scala 57:12]
+  assign dtim_io_Adr = io_IEUAdr; // @[src/main/scala/riscvsingle/lsu/LSU.scala 58:15]
+  assign dtim_io_MemRead = io_MemRW[1] & LoadAllowed; // @[src/main/scala/riscvsingle/lsu/LSU.scala 53:29]
+  assign dtim_io_MemWrite = io_MemWrite & io_MemRW[0] & |ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 54:45]
+  assign dtim_io_WriteDataWord = subwordWrite_io_WriteDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 51:27 56:17]
+  assign dtim_io_ByteMask = swByteMask_io_ByteMask; // @[src/main/scala/riscvsingle/lsu/LSU.scala 50:22 55:12]
+  assign subwordRead_io_ReadDataWord = dtim_io_ReadDataWord; // @[src/main/scala/riscvsingle/lsu/LSU.scala 52:26 63:16]
+  assign subwordRead_io_ByteOffset = io_IEUAdr[1:0]; // @[src/main/scala/riscvsingle/lsu/LSU.scala 27:26]
+  assign subwordRead_io_Funct3 = io_Funct3; // @[src/main/scala/riscvsingle/lsu/LSU.scala 67:25]
 endmodule
 module RiscvSingle(
   input         clk, // @[src/main/scala/riscvsingle/RiscvSingle.scala 21:15]
@@ -1100,11 +1297,15 @@ module RiscvSingle(
   wire [31:0] ieu_io_PCPlus4; // @[src/main/scala/riscvsingle/RiscvSingle.scala 32:19]
   wire  ieu_io_PCSrc; // @[src/main/scala/riscvsingle/RiscvSingle.scala 32:19]
   wire  ieu_io_MemWrite; // @[src/main/scala/riscvsingle/RiscvSingle.scala 32:19]
+  wire [1:0] ieu_io_MemRW; // @[src/main/scala/riscvsingle/RiscvSingle.scala 32:19]
+  wire [2:0] ieu_io_Funct3; // @[src/main/scala/riscvsingle/RiscvSingle.scala 32:19]
   wire [31:0] ieu_io_IEUAdr; // @[src/main/scala/riscvsingle/RiscvSingle.scala 32:19]
   wire [31:0] ieu_io_WriteData; // @[src/main/scala/riscvsingle/RiscvSingle.scala 32:19]
   wire [31:0] ieu_io_ReadData; // @[src/main/scala/riscvsingle/RiscvSingle.scala 32:19]
   wire  lsu_clk; // @[src/main/scala/riscvsingle/RiscvSingle.scala 33:19]
   wire  lsu_io_MemWrite; // @[src/main/scala/riscvsingle/RiscvSingle.scala 33:19]
+  wire [1:0] lsu_io_MemRW; // @[src/main/scala/riscvsingle/RiscvSingle.scala 33:19]
+  wire [2:0] lsu_io_Funct3; // @[src/main/scala/riscvsingle/RiscvSingle.scala 33:19]
   wire [31:0] lsu_io_IEUAdr; // @[src/main/scala/riscvsingle/RiscvSingle.scala 33:19]
   wire [31:0] lsu_io_WriteData; // @[src/main/scala/riscvsingle/RiscvSingle.scala 33:19]
   wire [31:0] lsu_io_ReadData; // @[src/main/scala/riscvsingle/RiscvSingle.scala 33:19]
@@ -1125,6 +1326,8 @@ module RiscvSingle(
     .io_PCPlus4(ieu_io_PCPlus4),
     .io_PCSrc(ieu_io_PCSrc),
     .io_MemWrite(ieu_io_MemWrite),
+    .io_MemRW(ieu_io_MemRW),
+    .io_Funct3(ieu_io_Funct3),
     .io_IEUAdr(ieu_io_IEUAdr),
     .io_WriteData(ieu_io_WriteData),
     .io_ReadData(ieu_io_ReadData)
@@ -1132,13 +1335,15 @@ module RiscvSingle(
   LSU lsu ( // @[src/main/scala/riscvsingle/RiscvSingle.scala 33:19]
     .clk(lsu_clk),
     .io_MemWrite(lsu_io_MemWrite),
+    .io_MemRW(lsu_io_MemRW),
+    .io_Funct3(lsu_io_Funct3),
     .io_IEUAdr(lsu_io_IEUAdr),
     .io_WriteData(lsu_io_WriteData),
     .io_ReadData(lsu_io_ReadData)
   );
-  assign io_WriteData = ieu_io_WriteData; // @[src/main/scala/riscvsingle/RiscvSingle.scala 57:16]
-  assign io_IEUAdr = ieu_io_IEUAdr; // @[src/main/scala/riscvsingle/RiscvSingle.scala 58:13]
-  assign io_MemWrite = ieu_io_MemWrite; // @[src/main/scala/riscvsingle/RiscvSingle.scala 59:15]
+  assign io_WriteData = ieu_io_WriteData; // @[src/main/scala/riscvsingle/RiscvSingle.scala 59:16]
+  assign io_IEUAdr = ieu_io_IEUAdr; // @[src/main/scala/riscvsingle/RiscvSingle.scala 60:13]
+  assign io_MemWrite = ieu_io_MemWrite; // @[src/main/scala/riscvsingle/RiscvSingle.scala 61:15]
   assign ifu_clk = clk; // @[src/main/scala/riscvsingle/RiscvSingle.scala 35:11]
   assign ifu_reset = reset; // @[src/main/scala/riscvsingle/RiscvSingle.scala 36:13]
   assign ifu_io_PCSrc = ieu_io_PCSrc; // @[src/main/scala/riscvsingle/RiscvSingle.scala 29:19 49:9]
@@ -1148,9 +1353,11 @@ module RiscvSingle(
   assign ieu_io_Instr = ifu_io_Instr; // @[src/main/scala/riscvsingle/RiscvSingle.scala 27:19 41:9]
   assign ieu_io_PC = ifu_io_PC; // @[src/main/scala/riscvsingle/RiscvSingle.scala 25:16 39:6]
   assign ieu_io_PCPlus4 = ifu_io_PCPlus4; // @[src/main/scala/riscvsingle/RiscvSingle.scala 26:21 40:11]
-  assign ieu_io_ReadData = lsu_io_ReadData; // @[src/main/scala/riscvsingle/RiscvSingle.scala 28:22 55:12]
+  assign ieu_io_ReadData = lsu_io_ReadData; // @[src/main/scala/riscvsingle/RiscvSingle.scala 28:22 57:12]
   assign lsu_clk = clk; // @[src/main/scala/riscvsingle/RiscvSingle.scala 51:11]
   assign lsu_io_MemWrite = ieu_io_MemWrite; // @[src/main/scala/riscvsingle/RiscvSingle.scala 52:19]
-  assign lsu_io_IEUAdr = ieu_io_IEUAdr; // @[src/main/scala/riscvsingle/RiscvSingle.scala 53:17]
-  assign lsu_io_WriteData = ieu_io_WriteData; // @[src/main/scala/riscvsingle/RiscvSingle.scala 54:20]
+  assign lsu_io_MemRW = ieu_io_MemRW; // @[src/main/scala/riscvsingle/RiscvSingle.scala 53:16]
+  assign lsu_io_Funct3 = ieu_io_Funct3; // @[src/main/scala/riscvsingle/RiscvSingle.scala 54:17]
+  assign lsu_io_IEUAdr = ieu_io_IEUAdr; // @[src/main/scala/riscvsingle/RiscvSingle.scala 55:17]
+  assign lsu_io_WriteData = ieu_io_WriteData; // @[src/main/scala/riscvsingle/RiscvSingle.scala 56:20]
 endmodule

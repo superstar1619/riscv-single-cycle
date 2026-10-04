@@ -50,12 +50,14 @@ class RiscvSingleSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "execute from a nonzero reset vector with independent 128-word instruction and data memories" in {
+  it should ("execute from a nonzero reset vector with independent 128-word " +
+    "instruction and data memories") in {
     test(new RiscvSingleHarness(expandedConfig)) { dut =>
       // The program distinguishes word 127 (508) from word 63 (252),
       // loads both through real RAM, checks a negative load offset and jal link,
       // and skips an instruction that would replace the expected value by 999.
-      val addresses = Seq(31, 511, 511, 0, 508, 7, 252, 508, 100, 0x12c, 104, 108, 0x134)
+      // x2=511; sw/lw use offset -3, so their effective address is aligned 508.
+      val addresses = Seq(31, 511, 508, 0, 508, 7, 252, 508, 100, 0x12c, 104, 108, 0x134)
       val stores = Map(2 -> 31, 6 -> 7, 8 -> 31, 10 -> 0x128, 11 -> 31)
       dut.reset.poke(false.B)
       for ((address, cycle) <- addresses.zipWithIndex) {
@@ -105,7 +107,8 @@ class RiscvSingleSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "emit exactly the five book ports and the complete hierarchy with synchronous state updates" in {
+  it should ("emit exactly the five book ports and the complete hierarchy " +
+    "with synchronous state updates") in {
     for (config <- Seq(bookConfig, expandedConfig, CpuConfig())) {
       val targetDir = Files.createTempDirectory("cpu-interface-")
       val verilog = (new ChiselStage).emitVerilog(new RiscvSingle(config),
@@ -121,14 +124,20 @@ class RiscvSingleSpec extends AnyFlatSpec with ChiselScalatestTester {
         "io_MemWrite" -> ("output", 1)))
       val modules = "(?m)^module (\\w+)\\(".r.findAllMatchIn(verilog).map(_.group(1)).toSet
       assert(modules == Set("RiscvSingle", "IFU", "IEU", "LSU", "IROM",
-        "Controller", "Datapath", "RegFile", "Extend", "Cmp", "ALU", "Shifter"))
+        "Controller", "Datapath", "RegFile", "Extend", "Cmp", "ALU", "Shifter",
+        "DTIM", "SwByteMask", "SubwordWrite", "SubwordRead"))
       for ((module, instance) <- Seq("IFU" -> "ifu", "IEU" -> "ieu", "LSU" -> "lsu")) {
         assert(verilog.contains(s"$module $instance ("), s"Missing child $instance")
       }
-      val events = "always\\s*@\\s*\\(([^)]+)\\)".r.findAllMatchIn(verilog).map(_.group(1)).toSeq
-      assert(events == Seq.fill(3)("posedge clk"), "PC, registers, and RAM must update synchronously")
-      assert(verilog.contains(s"ROM [0:${config.imemDepth - 1}];"), "Instruction depth must reach IROM")
-      assert(verilog.contains(s"RAM [0:${config.dmemDepth - 1}];"), "Data depth must reach LSU")
+      val events = "always\\s*@\\s*\\(([^)]+)\\)".r
+        .findAllMatchIn(verilog).map(_.group(1)).toSeq
+      assert(events == Seq.fill(3)("posedge clk"),
+        "PC, registers, and RAM must update synchronously")
+      assert(verilog.contains(s"ROM [0:${config.imemDepth - 1}];"),
+        "Instruction depth must reach IROM")
+      val byteRAMs = s"reg \\[7:0\\] RAM_\\d+ \\[0:${config.dmemDepth - 1}\\];".r
+      assert(byteRAMs.findAllIn(verilog).size == 4,
+        "Data depth must reach all DTIM byte lanes")
       assert(verilog.contains(s"pcreg <= 32'h${config.resetVector.toString(16)};"),
         "Reset address must reach IFU")
       assert(verilog.contains("$readmemh") == config.instructionInitFile.isDefined,

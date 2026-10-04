@@ -1,0 +1,14 @@
+[timestart] 0
+[size] 1400 800
+[signals_width] 280
+[zoom] -2.0
+@28
+DTIMHarness.clock
+DTIMHarness.io_MemRead
+DTIMHarness.io_MemWrite
+@22
+DTIMHarness.io_ByteMask
+DTIMHarness.io_Adr
+DTIMHarness.dut.WordIndex
+DTIMHarness.io_WriteDataWord
+DTIMHarness.io_ReadDataWord

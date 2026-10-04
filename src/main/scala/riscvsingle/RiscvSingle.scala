@@ -50,6 +50,8 @@ final class RiscvSingle(val config: CpuConfig = CpuConfig()) extends RawModule {
 
   lsu.clk := clk
   lsu.io.MemWrite := ieu.io.MemWrite
+  lsu.io.MemRW := ieu.io.MemRW
+  lsu.io.Funct3 := ieu.io.Funct3
   lsu.io.IEUAdr := ieu.io.IEUAdr
   lsu.io.WriteData := ieu.io.WriteData
   ReadData := lsu.io.ReadData

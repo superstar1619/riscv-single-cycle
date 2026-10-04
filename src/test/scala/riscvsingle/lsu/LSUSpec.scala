@@ -48,6 +48,8 @@ private class ExecutionWithLSUHarness(config: CpuConfig) extends Module {
   ieu.io.Instr := ifu.io.Instr
   ieu.io.ReadData := lsu.io.ReadData
   lsu.io.MemWrite := ieu.io.MemWrite && !io.ProbeEnable
+  lsu.io.MemRW := Mux(io.ProbeEnable, 2.U, ieu.io.MemRW)
+  lsu.io.Funct3 := Mux(io.ProbeEnable, 2.U, ieu.io.Funct3)
   lsu.io.IEUAdr := Mux(io.ProbeEnable, io.ProbeAdr, ieu.io.IEUAdr)
   lsu.io.WriteData := ieu.io.WriteData
   io.PC := ifu.io.PC
@@ -65,15 +67,18 @@ class LSUSpec extends AnyFlatSpec with ChiselScalatestTester {
   private def write(dut: LSUHarness, address: BigInt, value: BigInt): Unit = {
     dut.io.IEUAdr.poke(address.U)
     dut.io.WriteData.poke(value.U)
+    dut.io.Funct3.poke(2.U)
+    dut.io.MemRW.poke(1.U)
     dut.io.MemWrite.poke(true.B)
     dut.clock.step()
     dut.io.MemWrite.poke(false.B)
+    dut.io.MemRW.poke(2.U)
   }
 
   behavior of "LSU"
 
   for (depth <- Seq(2, 64, 128)) {
-    it should s"store all $depth words and read byte-offset and upper-address aliases combinationally" in {
+    it should s"store all $depth words and read aligned word and byte aliases" in {
       test(new LSUHarness(CpuConfig(dmemDepth = depth))) { dut =>
         val random = new Random(0x215 + depth)
         val words = Seq.tabulate(depth) { index =>
@@ -84,21 +89,27 @@ class LSUSpec extends AnyFlatSpec with ChiselScalatestTester {
         val bytes = BigInt(depth) * 4
         val aliases = Seq(BigInt(0), bytes, BigInt(1) << 31, mask ^ (bytes - 1))
         // No clock steps: all read address changes must select data immediately.
-        for (index <- random.shuffle(words.indices.toVector); offset <- 0 until 4; alias <- aliases) {
+        for (index <- random.shuffle(words.indices.toVector);
+            offset <- 0 until 4; alias <- aliases) {
           dut.io.IEUAdr.poke(((BigInt(index) * 4 + offset) | alias).U)
+          dut.io.Funct3.poke(4.U)
+          dut.io.ReadData.expect(((words(index) >> (8 * offset)) & 0xff).U)
+          dut.io.IEUAdr.poke(((BigInt(index) * 4) | alias).U)
+          dut.io.Funct3.poke(2.U)
           dut.io.ReadData.expect(words(index).U)
         }
       }
     }
   }
 
-  it should "sample address data and write enable only at rising edges without forwarding pending writes" in {
+  it should "sample word writes at rising edges without forwarding pending writes" in {
     test(new LSUHarness) { dut =>
       write(dut, 0, BigInt("11111111", 16))
       write(dut, 4, BigInt("22222222", 16))
       dut.io.IEUAdr.poke(0.U)
       dut.io.WriteData.poke("haaaaaaaa".U)
       dut.io.MemWrite.poke(true.B)
+      dut.io.MemRW.poke(3.U)
       dut.io.ReadData.expect("h11111111".U)
       dut.io.IEUAdr.poke(4.U)
       dut.io.WriteData.poke("hbbbbbbbb".U)
@@ -111,13 +122,13 @@ class LSUSpec extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.ReadData.expect("hbbbbbbbb".U)
       dut.io.IEUAdr.poke(0.U)
       dut.io.ReadData.expect("h11111111".U)
-      dut.io.IEUAdr.poke("h80000107".U) // Aliases word 1, offset 3.
+      dut.io.IEUAdr.poke("h80000104".U) // Aligned upper-address alias of word 1.
       dut.io.MemWrite.poke(true.B)
       dut.io.WriteData.poke("hcccccccc".U)
       dut.io.ReadData.expect("hbbbbbbbb".U)
       dut.clock.step()
       dut.io.MemWrite.poke(false.B)
-      dut.io.IEUAdr.poke(5.U)
+      dut.io.IEUAdr.poke(4.U)
       dut.io.ReadData.expect("hcccccccc".U)
       dut.io.IEUAdr.poke(0.U)
       dut.io.ReadData.expect("h11111111".U)
@@ -130,13 +141,14 @@ class LSUSpec extends AnyFlatSpec with ChiselScalatestTester {
       val model = Array.fill[BigInt](64)(BigInt(32, random))
       for (index <- model.indices) write(dut, BigInt(index) * 4, model(index))
       for (_ <- 0 until 300) {
-        val address = BigInt(32, random)
+        val address = BigInt(32, random) & (mask ^ 3)
         val index = ((address / 4) % model.length).toInt
         val value = BigInt(32, random)
         val enable = random.nextBoolean()
         dut.io.IEUAdr.poke(address.U)
         dut.io.WriteData.poke(value.U)
         dut.io.MemWrite.poke(enable.B)
+        dut.io.MemRW.poke(3.U)
         dut.io.ReadData.expect(model(index).U)
         dut.clock.step()
         if (enable) model(index) = value
@@ -187,7 +199,7 @@ class LSUSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "emit the five book ports and parameterized RAM with only clock-edge writes" in {
+  it should "emit seven RV32 ports and parameterized byte RAM with clock-edge writes" in {
     for (depth <- Seq(64, 128)) {
       val targetDir = Files.createTempDirectory("lsu-interface-")
       val verilog = (new ChiselStage).emitVerilog(new LSU(CpuConfig(dmemDepth = depth)),
@@ -199,10 +211,15 @@ class LSUSpec extends AnyFlatSpec with ChiselScalatestTester {
         port.group(3) -> (port.group(1), width)
       }.toMap
       assert(ports == Map("clk" -> ("input", 1), "io_MemWrite" -> ("input", 1),
+        "io_MemRW" -> ("input", 2), "io_Funct3" -> ("input", 3),
         "io_IEUAdr" -> ("input", 32), "io_WriteData" -> ("input", 32),
         "io_ReadData" -> ("output", 32)))
-      assert(verilog.contains(s"reg [31:0] RAM [0:${depth - 1}];"), "RAM depth must follow configuration")
-      val events = "always\\s*@\\s*\\(([^)]+)\\)".r.findAllMatchIn(verilog).map(_.group(1)).toSeq
+      val memories = s"reg \\[7:0\\] RAM_\\d+ \\[0:${depth - 1}\\];".r
+      assert(memories.findAllIn(verilog).size == 4, "Four byte lanes must follow depth")
+      val modules = "(?m)^module (\\w+)\\(".r.findAllMatchIn(verilog).map(_.group(1)).toSet
+      assert(modules == Set("LSU", "DTIM", "SwByteMask", "SubwordWrite", "SubwordRead"))
+      val events = "always\\s*@\\s*\\(([^)]+)\\)".r
+        .findAllMatchIn(verilog).map(_.group(1)).toSeq
       assert(events == Seq("posedge clk"), "RAM writes must be synchronous")
       assert(!verilog.contains("$readmemh"), "The book's data RAM has no initialization file")
     }

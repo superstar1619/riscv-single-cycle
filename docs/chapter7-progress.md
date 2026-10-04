@@ -1,14 +1,14 @@
 # 第七章单周期 CPU 进度与后续执行报告
 
-记录日期：2026-10-04（Asia/Shanghai）。工程目录：`/home/unlastingstar/cvw-experiment/single-cycle/riscv-single-cycle`，分支：`main`。
+记录日期：2026-10-05（Asia/Shanghai）；第 13 轮功能验证于 10-04 完成。工程目录：`/home/unlastingstar/cvw-experiment/single-cycle/riscv-single-cycle`，分支：`main`。
 
 ## 1. 当前停点与提交定位
 
-**第七章 16 轮计划已交付前 10 轮；用户已授权提交 SwByteMask、SubwordWrite，并继续第 11 轮 SubwordRead。** 第二章简化 CPU 已完成，第七章执行单元已接通表 7.1 的 RV32 指令控制、运算、分支和跳转；数据存储仍为第二章的整字 RAM，完整子字访存尚未接通。
+**第七章 16 轮计划已交付前 13 轮；第 9/10 轮已提交，当前停在 LSU 等待核验，下一轮为第 14 轮 IROM。** 执行单元已接通表 7.1 的 RV32 指令控制、运算、分支和跳转；四个访存模块已连接 LSU，CPU 补上 MemRW/Funct3 后接入子字数据路径。完整整机签名、额外观察接口和复位期间写入屏蔽仍待第 16 轮。
 
-第 8 轮 IEU 与原进度报告已提交为 `89b1e58`，其前置基线为 Datapath 提交 `ffd13e5`。本次按用户最新指令，将第 9 轮 SwByteMask、第 10 轮 SubwordWrite 及其可读性更新一起提交，再继续第 11 轮；不合并或推送。
+第 8 轮 IEU 已提交为 `89b1e58`。此前按用户指令将第 9 轮 SwByteMask、第 10 轮 SubwordWrite 及可读性更新提交为 `886e708`，随后完成第 11 轮 SubwordRead、第 12 轮 DTIM。本次收到“继续”后完成第 13 轮 LSU；第 11/12/13 轮均保留为未提交交付，等待用户检查，未合并或推送。
 
-SwByteMask 是教材图 7.9 和计划中 LSU/DTIM 所需的字节写使能模块，用于 SB/SH/SW 只更新指定字节，因此保留源码、生成入口、测试与 RTL。当前尚未接入整机，不能以暂未连接为由删除。
+SwByteMask 是教材图 7.9 中 LSU/DTIM 所需的字节写使能模块，用于 SB/SH/SW 只更新指定字节，因此保留源码、生成入口、测试与 RTL；第 13 轮已经接入 LSU 和 CPU。
 
 通过提交日志、工作树状态及模块报告定位交付：
 
@@ -33,8 +33,11 @@ git diff -- docs/chapter7-progress.md
 | 6 | Controller | 表 7.1 的 37 类 RV32 指令、六种分支；完整 Funct7、Jump、MemRW、3 位 ImmSrc；非法指令关闭副作用。 | `ffbb866`；[05-controller.md](modules/05-controller.md) |
 | 7 | Datapath | LUI/AUIPC、JAL/JALR 链接值；三级写回选择；JALR 目标位 0 清零。 | `ffd13e5`；[06-datapath.md](modules/06-datapath.md) |
 | 8 | IEU | Controller/Datapath 完整连接；导出 MemRW/Funct3；独立程序和参考模型验证全部 37 类指令。 | `89b1e58`；[07-ieu.md](modules/07-ieu.md) |
-| 9 | SwByteMask | 独立组合掩码；32 位 SB/SH/SW、64 位增加 SD；完整 Funct3、自然对齐，非法/未对齐输出零。尚未接入 LSU。 | 本次经用户授权提交；[13-swbytemask.md](modules/13-swbytemask.md) |
-| 10 | SubwordWrite | 纯组合低位数据复制；32 位 SB/SH/SW、64 位增加 SD；完整 Funct3 校验，非法编码输出零；提供两种宽度波形，尚未接入 LSU。 | 本次经用户授权提交；[14-subwordwrite.md](modules/14-subwordwrite.md) |
+| 9 | SwByteMask | 独立组合掩码；32 位 SB/SH/SW、64 位增加 SD；完整 Funct3、自然对齐，非法/未对齐输出零；第 13 轮接入 LSU。 | `886e708`；[13-swbytemask.md](modules/13-swbytemask.md) |
+| 10 | SubwordWrite | 纯组合低位数据复制；32 位 SB/SH/SW、64 位增加 SD；完整 Funct3 校验，非法编码输出零；两种宽度波形，第 13 轮接入 LSU。 | `886e708`；[14-subwordwrite.md](modules/14-subwordwrite.md) |
+| 11 | SubwordRead | 逐级小端子字选择与符号/零扩展；RV32 五种加载，独立 RV64 增 LD/LWU；非法编码输出零；两种宽度波形，第 13 轮接入 LSU。 | 工作区未提交；[15-subwordread.md](modules/15-subwordread.md) |
+| 12 | DTIM | 独立 32/64 位 RAM；组合读、上升沿逐字节掩码写；读取禁用输出零，无复位/初始化；容量回绕，第 13 轮接入 LSU。 | 工作区未提交；[16-dtim.md](modules/16-dtim.md) |
+| 13 | LSU | RV32 三种存储、五种加载，四模块连接；非法/未对齐读零、不写；双写使能、组合读/边沿写；CPU 必要接口适配、64/128 项 RTL 与波形。 | 工作区未提交，等待核验；[17-lsu-chapter7.md](modules/17-lsu-chapter7.md) |
 
 报告编号沿用既有模块目录，**不等于第七章执行轮次**：例如 Shifter 的报告是 `12-shifter.md`，其执行轮次为 4。新增模块应使用独立报告并更新 README 索引，不覆盖已有报告。
 
@@ -43,7 +46,7 @@ git diff -- docs/chapter7-progress.md
 ### 参数与状态
 
 - 统一 `CpuConfig`：`xlen=32`、`imemDepth=64`、`dmemDepth=64`、`resetVector=0`、`instructionInitFile=None` 为默认值；当前整机仅允许 xlen=32。
-- 存储深度以 32 位字计，须为不小于 2 的二次幂且总字节数不超过 2^32。resetVector 为 32 位范围内、4 字节对齐的字节地址。
+- CpuConfig 的存储深度以 32 位字计，须为不小于 2 的二次幂且总字节数不超过 2^32。独立 DTIM 的 depth 以 dataWidth 位原生字计，采用相同深度/容量限制；64 位每字 8 字节。resetVector 为 32 位范围内、4 字节对齐的字节地址。
 - Extend 输出宽度至少 32；Cmp、Shifter、ALU 和访存辅助模块独立验证 32/64 位。独立模块 64 位配置不表示整机已支持 RV64I。
 - 指令固定 32 位，小端存储，地址按字节计；保留存储容量回绕映射。
 - 显式 clk，高有效同步 reset；RegFile 使用完整数组和直接索引，复位仅清零 x0、保留非零寄存器，正常写入禁止 x0。PC 在复位上升沿加载 resetVector；RAM 不复位清空。
@@ -73,11 +76,11 @@ ALU 的 IEUAdr 始终为加减器结果，不能误用逻辑或移位运算结�
 | --- | --- |
 | clk、reset、Instr[31:0]、PC[31:0]、PCPlus4[31:0]、ReadData[31:0] | PCSrc、MemWrite、MemRW[1:0]、Funct3[2:0]、IEUAdr[31:0]、WriteData[31:0] |
 
-Funct3 恒为 Instr[14:12]，包括非访存、非法指令和复位期间。WriteData 恒为完整原始 R2。ReadData 表示外部已经处理完成的加载结果，IEU 原样写回；字节提取、符号扩展和写数据复制由 LSU 负责；SubwordWrite 本轮独立完成，尚待第 13 轮接入。
+Funct3 恒为 Instr[14:12]，包括非访存、非法指令和复位期间。WriteData 恒为完整原始 R2。ReadData 表示外部已经处理完成的加载结果，IEU 原样写回；字节提取、符号扩展和写数据复制由 LSU 负责，第 13 轮已连接四个访存模块。
 
-当前 [RiscvSingle.scala](../src/main/scala/riscvsingle/RiscvSingle.scala) 只消费兼容 MemWrite，新 MemRW/Funct3 尚未接入旧 [LSU.scala](../src/main/scala/riscvsingle/lsu/LSU.scala)。两份 CPU 导出因此裁去未消费的 IEU 新输出，内部 IEU 为 10 端口；独立 [IEU.v](../generated/ieu/IEU.v) 保留 12 端口。CPU 和 LSU 生产端口各为 5 个，尚无顶层 ByteMask 观察输出。
+当前 [RiscvSingle.scala](../src/main/scala/riscvsingle/RiscvSingle.scala) 将兼容 MemWrite、MemRW、Funct3 一并连接 [LSU.scala](../src/main/scala/riscvsingle/lsu/LSU.scala)。两份重新生成的 CPU 导出中，IEU 保留完整 12 端口，LSU 为 7 端口；CPU 顶层仍为 5 端口，尚无顶层 ByteMask 观察输出。LSU 内部 ByteMask 是大小/偏移掩码，实际写入另由双使能门控。
 
-旧 LSU 组合读取整个字、上升沿写整个字，忽略地址低两位；当前整机的 LB/LH/SB/SH 不能据此宣称正确实现。**计划要求的未对齐读取零、禁止写入尚待第 13 轮 LSU；顶层复位期间抑制存储写入尚待第 16 轮。** IEU 自身 reset 只阻止寄存器正常写入，不屏蔽组合 MemRW/MemWrite/PCSrc。
+第 13 轮已实现子字加载/存储与未对齐读零、不写。CPU 已接入该数据路径，本轮证明独立 LSU 与 IEU 子字写回，并保持现有整机程序结果；完整 RV32 子字整机签名验收仍归第 16 轮。**CPU 顶层 MemWrite 仍表示 IEU 请求，顶层复位期间抑制存储写入尚待第 16 轮。** IEU 自身 reset 只阻止寄存器正常写入，不屏蔽组合 MemRW/MemWrite/PCSrc。
 
 ## 4. 验证证据与复现
 
@@ -129,7 +132,7 @@ make test-rtl
 
 本轮日志为 `target/swbytemask-round9-{red-interface,red,focused,regression-generate,rtl}.log`。实际产物为 `generated/swbytemask/SwByteMask.v` 与 `generated/swbytemask64/SwByteMask.v`。
 
-### 第 10 轮当前交付
+### 第 10 轮历史交付
 
 SubwordWrite 采用 Chisel `Fill` 复制低 8/16/32 位，并按完整 Funct3 选择结果；64 位的 SD 原样输出。非法编码输出零，生产模块恰好三个组合端口，无时钟、复位或状态。CVW 的 32/64 位分支只译码 Funct3 低两位，本工程保留完整编码校验。依据和全部接口见 [SubwordWrite 核验报告](modules/14-subwordwrite.md)。
 
@@ -146,7 +149,66 @@ make test-rtl
 
 实际 RTL：`generated/subwordwrite/SubwordWrite.v`、`generated/subwordwrite64/SubwordWrite.v`。实际 VCD：`target/waveforms/subwordwrite32.vcd`、`target/waveforms/subwordwrite64.vcd`；预选信号配置：`waves/subwordwrite32.gtkw`、`waves/subwordwrite64.gtkw`。VCD 时钟仅来自测试包装层。日志为 `target/subwordwrite-round10-{baseline,red,focused,regression,generate32,generate64,wave,rtl}.log`。
 
-可读性整理：SubwordWrite 源码增加中文说明与三步结构；测试显式列出 Funct3/期望值，并澄清参考模型及高位隔离输入名称；报告分表说明 CVW 差异、验证阶段和波形。功能与测试覆盖保持一致，整理后全工程 133 项及现有整机 RTL 六次运行再次通过。更新日志位于 `target/subwordwrite-readability/`；用户现已授权提交后继续第 11 轮。
+可读性整理：SubwordWrite 源码增加中文说明与三步结构；测试显式列出 Funct3/期望值，并澄清参考模型及高位隔离输入名称；报告分表说明 CVW 差异、验证阶段和波形。功能与测试覆盖保持一致，整理后全工程 133 项及现有整机 RTL 六次运行再次通过。更新日志位于 `target/subwordwrite-readability/`；第 9/10 轮及可读性更新现已提交为 `886e708`。
+
+### 第 11 轮历史交付
+
+先阅读教材 §7.1.6/图 7.9 和 CVW `lsu/subwordread.sv`，再用 Chisel 实现 SubwordRead 的逐级 Word → Halfword → Byte 选择、符号/零扩展与完整 Funct3 译码。只有四个组合端口，无时钟/复位。32 位支持 LB/LH/LW/LBU/LHU；64 位另支持 LD/LWU。详见 [SubwordRead 核验报告](modules/15-subwordread.md)。
+
+大小相关低偏移位沿用 CVW 的选择行为：半字忽略 bit 0，32 位字忽略 bits 1:0；64 位的 LW/LWU 用 bit 2 选低/高字，LD 不使用偏移。SubwordRead 自身不检查自然对齐；整机未对齐读零仍由第 13 轮 LSU 门控，不提前承诺接通行为。
+
+测试先行：常零骨架实际运行 16 项，14 项功能失败、2 项接口/参数通过；实现后 **16/16 通过**。最终全工程 **16 个套件、149 项全部通过**，现有整机 RTL 六次 PASS。固定常量、符号边界、邻接字节隔离、组合切换，以及固定种子下全部 96 种 Funct3/偏移组合均已覆盖。
+
+```bash
+./scripts/sbt-local.sh 'testOnly riscvsingle.lsu.SubwordReadSpec'
+./scripts/sbt-local.sh test
+make generate-subwordread SBT=./scripts/sbt-local.sh
+make generate-subwordread SBT=./scripts/sbt-local.sh WIDTH=64 SUBWORDREAD_TARGET_DIR=generated/subwordread64
+make test-subwordread-wave SBT=./scripts/sbt-local.sh
+make test-rtl
+```
+
+RTL 位于 `generated/subwordread{,64}/SubwordRead.v`；VCD 位于 `target/waveforms/subwordread{32,64}.vcd`，GTKWave 配置位于 `waves/subwordread{32,64}.gtkw`。日志在 `target/subwordread-round11/`。观察时钟仅在测试包装层；CPU/LSU 仍使用原字 RAM。
+
+### 第 12 轮历史交付
+
+先阅读教材 §7.1.6/图 7.9、CVW `lsu/dtim.sv` 和 `generic/mem/ram1p1rwbe.sv`，再用 Chisel 的字节 Vec 存储器实现掩码写入。保持教材组合读、上升沿写，区别于 CVW 的同步读地址接口。独立接口共 7 端口：clk、Adr、MemRead、MemWrite、WriteDataWord、ByteMask → ReadDataWord。详见 [DTIM 核验报告](modules/16-dtim.md)。
+
+MemRead=0 输出零；MemWrite 独立控制写入，ByteMask(0) 对应最低字节；零掩码和未选中字节保持。地址忽略低字节偏移及容量外高位。没有 reset 或初始化；对齐和编码检查仍交由下一轮 LSU。
+
+测试先行：常零骨架实际运行 20 项，19 项失败、参数测试通过；实现后 **20/20 通过**。最终全工程 **17 个套件、169 项全部通过**，现有 CPU RTL 六次 PASS；两种宽度独立 RTL lint 通过。测试覆盖全部 16/256 种掩码、深度 2/64/128 的全部地址与偏移别名，以及每种宽度 300 笔固定种子字节模型事务。
+
+```bash
+./scripts/sbt-local.sh 'testOnly riscvsingle.lsu.DTIMSpec'
+./scripts/sbt-local.sh test
+make generate-dtim SBT=./scripts/sbt-local.sh
+make generate-dtim SBT=./scripts/sbt-local.sh WIDTH=64 DTIM_TARGET_DIR=generated/dtim64
+make test-dtim-wave SBT=./scripts/sbt-local.sh
+make test-rtl
+```
+
+RTL 位于 `generated/dtim{,64}/DTIM.v`，两者深度为 64 原生字；VCD 位于 `target/waveforms/dtim{32,64}.vcd`，GTKWave 配置位于 `waves/dtim{32,64}.gtkw`。日志在 `target/dtim-round12/`。旧 LSU/CPU 硬件和此前交付保持，RAM 内容只由生产写口建立，不假定上电值。
+
+### 第 13 轮当前交付
+
+先核对教材 §7.1.6/图 7.9 和 CVW `lsu/lsu.sv` 的 DTIM/Subword Accesses 连接，再完善 RV32 LSU。7 端口包含 clk、兼容 MemWrite、MemRW、Funct3、IEUAdr、WriteData、ReadData；三种存储和五种加载均已连接，非法/未对齐读零、不写。详见 [LSU 第七章核验报告](modules/17-lsu-chapter7.md)，原第二章报告保留为历史。
+
+测试先行：新接口仍使用旧 RAM 时 17 项中 12 失败、5 通过；实现后 **17/17 通过**。包括原 7 项测试的接口适配与新 10 项子字测试；覆盖 256 组编码/偏移/读写/兼容控制、600 笔固定种子字节模型、IEU 写回签名。默认/扩容 LSU 均通过 lint，波形 15 条路径核对通过。
+
+首次全回归 178/179，定位扩容镜像在地址 511 的未对齐 SW。将 PC=0x108 的 `00112023` 改为 `fe112ea3`（sw x1,-3(x2)，有效地址 508），同步 Scala/C++ 预期地址，保留负偏移加载和容量/JAL 签名。最终全工程 **18 个套件、179 项全部通过**，重新生成两种 CPU RTL 的六次仿真 PASS。
+
+```bash
+./scripts/sbt-local.sh 'testOnly riscvsingle.lsu.LSUSpec riscvsingle.lsu.LSUSubwordSpec'
+./scripts/sbt-local.sh test
+make generate-lsu SBT=./scripts/sbt-local.sh
+make generate-lsu SBT=./scripts/sbt-local.sh DMEM_DEPTH=128 LSU_TARGET_DIR=generated/lsu128
+make generate-cpu SBT=./scripts/sbt-local.sh
+make generate-cpu SBT=./scripts/sbt-local.sh IMEM_DEPTH=128 DMEM_DEPTH=128 CPU_TARGET_DIR=generated/riscv-single128 INSTRUCTION_INIT_FILE=programs/rv32-configtest.memfile RESET_VECTOR=0x100
+make test-rtl
+make test-lsu-wave SBT=./scripts/sbt-local.sh
+```
+
+独立 RTL 为 `generated/lsu/LSU.v`、`generated/lsu128/LSU.v`，均为 RV32；两份 CPU RTL 同步更新。VCD 为 `target/waveforms/lsu32.vcd`，GTKWave 配置为 `waves/lsu32.gtkw`。日志在 `target/lsu-round13/`，首次失败保留 regression.log，最终通过为 regression-final.log。已交付四个叶模块与本地规范文件保持，未自动提交。
 
 ## 5. 剩余轮次与验收要求
 
@@ -154,10 +216,7 @@ make test-rtl
 
 | 轮次 / 模块 | 本轮接口与功能 | 核验重点 |
 | --- | --- | --- |
-| **11 · SubwordRead（下一轮）** | 新模块；ReadDataWord、ByteOffset、Funct3 → ReadData；RV32 支持 LB/LBU/LH/LHU/LW，独立 RV64 增 LD/LWU。 | 合法偏移、符号边界、符号/零扩展；非法编码输出零。 |
-| 12 · DTIM | 新模块；clk、Adr、MemRead、MemWrite、WriteDataWord、ByteMask → ReadDataWord；组合读、上升沿按字节写。 | 未选中字节保持、地址独立、容量、写边沿和禁止写入；无复位清空。 |
-| 13 · LSU | 组合 DTIM 与三个辅助模块；消费 MemRW/Funct3/IEUAdr/WriteData，输出 ReadData；保留兼容 MemWrite，实际写入要求它与 MemRW[0] 同时有效。 | 混合 SB/SH/SW 与五种加载；字节隔离、符号读取；未对齐不写、读零。 |
-| 14 · IROM | 核对取指存储；保留组合读取、容量、文件初始化、地址切片映射。 | 64/128 项、镜像、不同地址与高地址映射；说明仿真初始化边界。 |
+| **14 · IROM（下一轮）** | 核对取指存储；保留组合读取、容量、文件初始化、地址切片映射。 | 64/128 项、镜像、不同地址与高地址映射；说明仿真初始化边界。 |
 | 15 · IFU | 核对 PC、PC+4、目标选择和 IROM；保留同步复位、resetVector，不重复清 JALR 目标位。 | 顺序/分支/跳转、回绕、无边沿 reset 脉冲。 |
 | 16 · RiscvSingle | 接通升级 IFU/IEU/LSU；保留观察输出，新增 MemRW/Funct3/ByteMask；顶层复位期间禁止正常寄存器和存储写入。 | 第二章程序与第七章完整签名、子字事务、不同容量/复位地址、Chisel 和生成 RTL。 |
 
@@ -169,11 +228,11 @@ make test-rtl
 
 后续执行者先读本报告、README、相关模块源码及对应核验报告，再确认 git 状态和最新用户授权。不要把第二章已实现的 IROM/IFU/LSU/RiscvSingle 当作已完成第七章的后续核验。
 
-下一轮仅处理 **SubwordRead**，须先明确核验通过本轮并允许继续：
+下一轮仅处理 **IROM**，须先明确核验通过本轮并允许继续：
 
-1. 重读教材 §7.1.6、图 7.9，以及 `/home/unlastingstar/cvw/src/lsu/subwordread.sv`；核对子字选择、符号/零扩展结构和 32/64 位独立模块范围。
-2. 先增加 32/64 位定向与参考测试，再实现 ReadDataWord、ByteOffset、Funct3 → ReadData；核验合法偏移、符号边界和符号/零扩展，非法编码输出零。
-3. 运行模块测试及 `./scripts/sbt-local.sh test`，生成两种宽度 RTL、简短中文测试说明和波形，核对实际端口；保持现有 CPU 合法程序通过。此轮不提前接入新 LSU 或实现 DTIM。
+1. 重读教材 §7.1.5 和 CVW `/home/unlastingstar/cvw/src/ifu/irom.sv`，核对既有 IROM、CpuConfig、生成入口、镜像与测试；采用单周期组合取指，不移植流水线、缓存或总线接口。
+2. 保留 32 位指令、以字为单位的容量与字节地址映射、文件初始化和容量回绕；补充必要定向/参数验证，区分仿真加载与 FPGA/ASIC 固化，不改变 PC/JALR 或 LSU 行为。
+3. 运行模块测试及 `./scripts/sbt-local.sh test`，生成 64/128 项独立 RTL、简短中文测试说明和波形，核对实际端口；如硬件改变再更新 CPU RTL，保持已有合法程序与六次 RTL 回归通过，不提前实施第 16 轮完整验收。
 4. 在 `docs/modules` 新增独立报告，更新 README 索引及本进度表，记录实际命令/结果/RTL 路径/整机接通边界。
 5. 标记“本轮停止，等待用户核验”，交付后停止；只有明确核验通过并允许继续，才进入下一轮。不自动提交、合并或连续实施；用户明确要求提交时执行相应提交。
 
@@ -187,4 +246,4 @@ make test-rtl
 - CVW：`/home/unlastingstar/cvw/src`；执行单元参照 `ieu/{ieu,controller,datapath}.sv`，访存参照 `lsu/{swbytemask,subwordwrite,subwordread,dtim,lsu}.sv`。只参考本轮相关结构，不移植其流水线或扩展接口。
 - [README 与模块索引](../README.md)、[统一配置](../src/main/scala/riscvsingle/config/CpuConfig.scala)、[IEU 当前报告](modules/07-ieu.md)、[RTL 整机验证说明](12-rtl-validation.md)。
 
-**当前授权：提交第 9/10 轮后继续 SubwordRead；第 11 轮交付后停止等待用户核验。**
+**本次停点：第 9/10 轮已提交为 `886e708`；第 11 轮 SubwordRead、第 12 轮 DTIM、第 13 轮 LSU 已交付、尚未提交。本轮停止等待核验，下一轮为 IROM。**

@@ -1,0 +1,20 @@
+module SubwordRead(
+  input  [31:0] io_ReadDataWord, // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 24:14]
+  input  [1:0]  io_ByteOffset, // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 24:14]
+  input  [2:0]  io_Funct3, // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 24:14]
+  output [31:0] io_ReadData // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 24:14]
+);
+  wire [15:0] SelectedHalfword = io_ByteOffset[1] ? io_ReadDataWord[31:16] : io_ReadDataWord[15:0]; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 36:26]
+  wire [7:0] SelectedByte = io_ByteOffset[0] ? SelectedHalfword[15:8] : SelectedHalfword[7:0]; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 37:22]
+  wire [7:0] _T = io_ByteOffset[0] ? SelectedHalfword[15:8] : SelectedHalfword[7:0]; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 41:30]
+  wire [31:0] _T_2 = {{24{_T[7]}},_T}; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 41:52]
+  wire [15:0] _T_3 = io_ByteOffset[1] ? io_ReadDataWord[31:16] : io_ReadDataWord[15:0]; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 42:34]
+  wire [31:0] _T_5 = {{16{_T_3[15]}},_T_3}; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 42:56]
+  wire [31:0] _T_8 = {{24'd0}, SelectedByte}; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 44:33]
+  wire [31:0] _T_9 = {{16'd0}, SelectedHalfword}; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 45:37]
+  wire [31:0] _io_ReadData_T_1 = 3'h0 == io_Funct3 ? _T_2 : 32'h0; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
+  wire [31:0] _io_ReadData_T_3 = 3'h1 == io_Funct3 ? _T_5 : _io_ReadData_T_1; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
+  wire [31:0] _io_ReadData_T_5 = 3'h2 == io_Funct3 ? io_ReadDataWord : _io_ReadData_T_3; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
+  wire [31:0] _io_ReadData_T_7 = 3'h4 == io_Funct3 ? _T_8 : _io_ReadData_T_5; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
+  assign io_ReadData = 3'h5 == io_Funct3 ? _T_9 : _io_ReadData_T_7; // @[src/main/scala/riscvsingle/lsu/SubwordRead.scala 52:56]
+endmodule

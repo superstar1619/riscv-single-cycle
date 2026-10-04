@@ -4,13 +4,13 @@
 
 ## 当前交付
 
-**第七章第 10 轮：SubwordWrite。** 新增独立组合写数据复制模块，32 位支持 SB/SH/SW，独立 64 位增加 SD；校验完整 Funct3，非法编码输出零。源码、中文测试说明、两种宽度 RTL 和波形见 [SubwordWrite 核验报告](docs/modules/14-subwordwrite.md)。**用户已授权提交后继续第 11 轮 SubwordRead；下一轮交付后停止等待核验。** SwByteMask 与 SubwordWrite 尚未接入 LSU，整机仍采用原有字 RAM。
+**第七章第 13 轮：LSU。** 连接 SwByteMask、SubwordWrite、DTIM 和 SubwordRead，支持 RV32 的 SB/SH/SW 与 LB/LH/LW/LBU/LHU；非法或未对齐读零、不写，保留组合读、上升沿写、小端与容量回绕。源码、中文测试、64/128 项 RTL 和波形见 [LSU 第七章核验报告](docs/modules/17-lsu-chapter7.md)。**本轮停止，等待用户核验；下一轮为 IROM。** CPU 已补上 MemRW/Funct3 的必要连线；完整整机验收留待第 16 轮。
 
-后续恢复执行请先读 [第七章进度与后续执行报告](docs/chapter7-progress.md)：包含前 10 轮交付状态、当前接口和整机边界、验证复现、剩余 6 轮验收与逐轮停点规则。
+本轮验证：LSU 两个套件共 17 项测试通过；全工程 18 个套件、179 项全部通过；重新生成的两种 CPU 配置六次 RTL 仿真全部 PASS。两种容量 LSU RTL 均通过 lint。扩容镜像的 SW 改为实际地址 508，适应自然对齐规则；原书程序和扩容签名保持。
 
-第 10 轮验证：SubwordWrite 的 12 项测试通过；全工程 15 个套件、133 项全部通过；现有两种 CPU 配置的六次 RTL 仿真全部 PASS。本次将第 9 轮 SwByteMask 一并提交；该模块是后续子字存储的字节写使能逻辑，予以保留。
+第 9 轮 SwByteMask、第 10 轮 SubwordWrite 及可读性更新已按用户要求提交为 `886e708`。SwByteMask 是教材图 7.9 和后续 LSU/DTIM 所需的字节写使能模块，保留交付。
 
-本轮可读性更新：源码按三步展示复制与选择，测试显式列出功能编码和期望常量，报告用对照表说明 CVW 差异及波形各阶段。
+后续恢复执行请先读 [第七章进度与后续执行报告](docs/chapter7-progress.md)：包含前 13 轮交付、当前接口和整机边界、验证命令及剩余 3 轮验收。第 11 轮 [SubwordRead](docs/modules/15-subwordread.md)、第 12 轮 [DTIM](docs/modules/16-dtim.md) 与本轮均保留为未提交交付。
 
 第 8 轮 IEU 已提交为 `89b1e58`：导出 `MemRW={MemRead,MemWrite}` 与原始 `Funct3`，独立验证全部 37 类 RV32 指令；加载数据由外部提供，详见 [IEU 核验报告](docs/modules/07-ieu.md)。
 
@@ -41,12 +41,14 @@
 | Shifter | [12-shifter.md](docs/modules/12-shifter.md) | [Shifter.scala](src/main/scala/riscvsingle/ieu/Shifter.scala) | [ShifterSpec.scala](src/test/scala/riscvsingle/ieu/ShifterSpec.scala) | [32 位](generated/shifter/Shifter.v)、[64 位](generated/shifter64/Shifter.v) |
 | SwByteMask | [13-swbytemask.md](docs/modules/13-swbytemask.md) | [SwByteMask.scala](src/main/scala/riscvsingle/lsu/SwByteMask.scala) | [SwByteMaskSpec.scala](src/test/scala/riscvsingle/lsu/SwByteMaskSpec.scala) | [32 位](generated/swbytemask/SwByteMask.v)、[64 位](generated/swbytemask64/SwByteMask.v) |
 | SubwordWrite | [14-subwordwrite.md](docs/modules/14-subwordwrite.md) | [SubwordWrite.scala](src/main/scala/riscvsingle/lsu/SubwordWrite.scala) | [SubwordWriteSpec.scala](src/test/scala/riscvsingle/lsu/SubwordWriteSpec.scala) | [32 位](generated/subwordwrite/SubwordWrite.v)、[64 位](generated/subwordwrite64/SubwordWrite.v) |
+| SubwordRead | [15-subwordread.md](docs/modules/15-subwordread.md) | [SubwordRead.scala](src/main/scala/riscvsingle/lsu/SubwordRead.scala) | [SubwordReadSpec.scala](src/test/scala/riscvsingle/lsu/SubwordReadSpec.scala) | [32 位](generated/subwordread/SubwordRead.v)、[64 位](generated/subwordread64/SubwordRead.v) |
+| DTIM | [16-dtim.md](docs/modules/16-dtim.md) | [DTIM.scala](src/main/scala/riscvsingle/lsu/DTIM.scala) | [DTIMSpec.scala](src/test/scala/riscvsingle/lsu/DTIMSpec.scala) | [32 位](generated/dtim/DTIM.v)、[64 位](generated/dtim64/DTIM.v) |
 | Controller | [05-controller.md](docs/modules/05-controller.md) | [Controller.scala](src/main/scala/riscvsingle/ieu/Controller.scala) | [ControllerSpec.scala](src/test/scala/riscvsingle/ieu/ControllerSpec.scala) | [Controller.v](generated/controller/Controller.v) |
 | Datapath | [06-datapath.md](docs/modules/06-datapath.md) | [Datapath.scala](src/main/scala/riscvsingle/ieu/Datapath.scala) | [DatapathSpec.scala](src/test/scala/riscvsingle/ieu/DatapathSpec.scala) | [Datapath.v](generated/datapath/Datapath.v) |
 | IEU | [07-ieu.md](docs/modules/07-ieu.md) | [IEU.scala](src/main/scala/riscvsingle/ieu/IEU.scala) | [IEUSpec.scala](src/test/scala/riscvsingle/ieu/IEUSpec.scala) | [IEU.v](generated/ieu/IEU.v) |
 | IROM | [08-irom.md](docs/modules/08-irom.md) | [IROM.scala](src/main/scala/riscvsingle/ifu/IROM.scala) | [IROMSpec.scala](src/test/scala/riscvsingle/ifu/IROMSpec.scala) | [64 项](generated/irom/IROM.v)、[128 项](generated/irom128/IROM.v) |
 | IFU | [09-ifu.md](docs/modules/09-ifu.md) | [IFU.scala](src/main/scala/riscvsingle/ifu/IFU.scala) | [IFUSpec.scala](src/test/scala/riscvsingle/ifu/IFUSpec.scala) | [默认](generated/ifu/IFU.v)、[128 项、复位地址 0x100](generated/ifu128/IFU.v) |
-| LSU | [10-lsu.md](docs/modules/10-lsu.md) | [LSU.scala](src/main/scala/riscvsingle/lsu/LSU.scala) | [LSUSpec.scala](src/test/scala/riscvsingle/lsu/LSUSpec.scala) | [64 项](generated/lsu/LSU.v)、[128 项](generated/lsu128/LSU.v) |
+| LSU | [第七章](docs/modules/17-lsu-chapter7.md)、[第二章历史](docs/modules/10-lsu.md) | [LSU.scala](src/main/scala/riscvsingle/lsu/LSU.scala) | [字访存](src/test/scala/riscvsingle/lsu/LSUSpec.scala)、[子字访存](src/test/scala/riscvsingle/lsu/LSUSubwordSpec.scala) | [64 项](generated/lsu/LSU.v)、[128 项](generated/lsu128/LSU.v) |
 | RiscvSingle | [11-riscv-single.md](docs/modules/11-riscv-single.md) | [RiscvSingle.scala](src/main/scala/riscvsingle/RiscvSingle.scala) | [RiscvSingleSpec.scala](src/test/scala/riscvsingle/RiscvSingleSpec.scala) | [默认 CPU](generated/riscv-single/RiscvSingle.v)、[128 项、复位地址 0x100](generated/riscv-single128/RiscvSingle.v) |
 
 [统一配置](src/main/scala/riscvsingle/config/CpuConfig.scala) 提供 CPU 结构参数。Extend、Cmp、ALU、RegFile 可单独配置数据位宽，RegFile 还可配置寄存器数量；Shifter 位宽须为不小于 2 的二次幂，默认 32。Controller 的端口位宽遵循固定的 RISC-V 指令字段和控制编码。Datapath、IEU 接受 `CpuConfig`，将 `xlen` 传递给端口与子模块，当前限定为 RV32 和 32 项寄存器。
@@ -57,7 +59,7 @@ IROM 接受同一配置，以 `imemDepth` 设置 32 位指令字数量，以 `in
 
 IFU 接受统一配置，用 `resetVector` 设置 PC 的复位字节地址，并将配置传给 IROM。项目统一使用高有效同步复位：reset=1 的时钟上升沿将 PC 加载为 resetVector，并将 RegFile 的 x0 清零；reset 电平变化本身不更新寄存器。正常时钟上升沿选择 PCPlus4 或 IEUAdr 更新 PC。
 
-LSU 以 `dmemDepth` 配置 32 位数据字数量，组合读取、在 MemWrite=1 的上升沿写入。按书中接口不设 RAM 复位或初始化；首次写入前的内容未指定，读写地址低两位及超出容量的高位均忽略。
+LSU 以 `dmemDepth` 配置 32 位数据字数量，按 MemRW/Funct3 进行子字读取和写入；实际存储要求兼容 MemWrite 与 MemRW[0] 同时有效。组合读、上升沿按掩码写，非法或未对齐读零、不写；容量外高位回绕。RAM 无复位或初始化，首次写入前的字节内容未指定。
 
 RiscvSingle 接入同一 `CpuConfig` 并连接 IFU、IEU、LSU，保留书中的 clk/reset 输入及 WriteData/IEUAdr/MemWrite 输出。生产顶层已执行书中程序，确认地址 96 写入 7、地址 100 写入 25。全项目 12 个套件、74 项测试通过。
 
@@ -86,6 +88,10 @@ make generate-swbytemask
 make generate-swbytemask WIDTH=64 SWBYTEMASK_TARGET_DIR=generated/swbytemask64
 make generate-subwordwrite
 make generate-subwordwrite WIDTH=64 SUBWORDWRITE_TARGET_DIR=generated/subwordwrite64
+make generate-subwordread
+make generate-subwordread WIDTH=64 SUBWORDREAD_TARGET_DIR=generated/subwordread64
+make generate-dtim
+make generate-dtim WIDTH=64 DTIM_TARGET_DIR=generated/dtim64
 make generate-alu
 make generate-alu WIDTH=64 ALU_TARGET_DIR=generated/alu64
 make generate-regfile
@@ -118,6 +124,10 @@ make generate-swbytemask SBT=./scripts/sbt-local.sh
 make generate-swbytemask SBT=./scripts/sbt-local.sh WIDTH=64 SWBYTEMASK_TARGET_DIR=generated/swbytemask64
 make generate-subwordwrite SBT=./scripts/sbt-local.sh
 make generate-subwordwrite SBT=./scripts/sbt-local.sh WIDTH=64 SUBWORDWRITE_TARGET_DIR=generated/subwordwrite64
+make generate-subwordread SBT=./scripts/sbt-local.sh
+make generate-subwordread SBT=./scripts/sbt-local.sh WIDTH=64 SUBWORDREAD_TARGET_DIR=generated/subwordread64
+make generate-dtim SBT=./scripts/sbt-local.sh
+make generate-dtim SBT=./scripts/sbt-local.sh WIDTH=64 DTIM_TARGET_DIR=generated/dtim64
 make generate-alu SBT=./scripts/sbt-local.sh
 make generate-alu SBT=./scripts/sbt-local.sh WIDTH=64 ALU_TARGET_DIR=generated/alu64
 make generate-regfile SBT=./scripts/sbt-local.sh
@@ -143,11 +153,11 @@ IROM 使用 `sbt "runMain riscvsingle.GenerateIROM 64 generated/irom programs/ri
 
 IFU 使用 `sbt "runMain riscvsingle.GenerateIFU 64 generated/ifu programs/riscvtest.memfile 0"`。四个可选参数依次为深度、输出目录、初始化文件、复位字节地址，Makefile 对应 `IMEM_DEPTH`、`IFU_TARGET_DIR`、`INSTRUCTION_INIT_FILE`、`RESET_VECTOR`。复位地址支持十进制和 `0x`/`0X` 十六进制。128 项、复位地址 0x100 的生成示例用于展示配置；默认镜像在该地址没有初始化指令，运行时需提供覆盖该地址的镜像。
 
-LSU 使用 `sbt "runMain riscvsingle.GenerateLSU 64 generated/lsu"`。两个可选参数依次为数据字深度、输出目录，Makefile 对应 `DMEM_DEPTH`、`LSU_TARGET_DIR`。LSU 联调测试在程序运行后直接读回 RAM 确认地址 100 保存 25；生产 RiscvSingle 通过公开顶层端口检查同一程序的执行与存储结果。
+LSU 使用 `sbt "runMain riscvsingle.GenerateLSU 64 generated/lsu"`。两个可选参数依次为数据字深度、输出目录，Makefile 对应 `DMEM_DEPTH`、`LSU_TARGET_DIR`，仍限定 RV32。LSU 联调测试在程序运行后通过合法 LW 探针确认地址 100 保存 25；另用独立字节模型和 IEU 写回签名验证子字访存。
 
 完整 CPU 使用 `sbt "runMain riscvsingle.GenerateRiscvSingle 64 64 generated/riscv-single programs/riscvtest.memfile 0"`。五个可选参数依次为指令深度、数据深度、输出目录、初始化文件、复位字节地址，分别对应 Makefile 的 `IMEM_DEPTH`、`DMEM_DEPTH`、`CPU_TARGET_DIR`、`INSTRUCTION_INIT_FILE`、`RESET_VECTOR`。文件参数 `-` 表示不初始化指令内容；复位地址支持十进制和 `0x`/`0X` 十六进制。默认生成加载书中程序镜像。
 
-128 项 CPU 示例使用完整的 [配置测试镜像](programs/rv32-configtest.memfile)，从 0x100 执行测试程序，验证 RAM 字 127 与字 63 独立、负偏移加载、jal 跳转与链接值。单独验证整机可执行 `./scripts/sbt-local.sh 'testOnly riscvsingle.RiscvSingleSpec'`。当前 IEU 已支持第七章表 7.1 的 RV32 指令译码与执行，整机 LSU 仍为原有字访存，子字提取、扩展及字节写掩码待后续轮次接入。异常、CSR 和外部总线接口不在本阶段范围；程序文件加载仍属于仿真初始化，FPGA/ASIC 程序固化尚未实现。
+128 项 CPU 示例使用完整的 [配置测试镜像](programs/rv32-configtest.memfile)，从 0x100 执行测试程序，验证 RAM 字 127 与字 63 独立、负偏移加载、jal 跳转与链接值。第 13 轮将该镜像的 SW 改为对齐的实际地址 508。单独验证整机可执行 `./scripts/sbt-local.sh 'testOnly riscvsingle.RiscvSingleSpec'`。当前 IEU 支持表 7.1 的 RV32 指令译码与执行，LSU 子字通路已接入；完整整机签名、额外观察端口和复位期间写入屏蔽留待第 16 轮。异常、CSR 和外部总线接口不在本阶段范围；程序文件加载仍属于仿真初始化，FPGA/ASIC 程序固化尚未实现。
 
 `make test-rtl` 使用 Verilator 和 C++17 编译器直接验证两份现有完整 CPU Verilog，测试仅通过五个生产顶层端口进行。可用 `make test-rtl VERILATOR=/path/to/verilator` 指定工具。脚本自动切换到项目根目录以加载镜像，将编译产物及日志放入 `target/rtl-test/{book,expanded}`，ccache 写入 `.cache/ccache`。修改 Chisel 后先执行上述两个 `generate-cpu` 命令，更新两份 RTL，再运行 `test-rtl`；该目标本身不重新生成硬件。
 
@@ -161,11 +171,44 @@ gtkwave target/waveforms/subwordwrite64.vcd waves/subwordwrite64.gtkw
 
 观察时钟仅在测试包装层；生产模块没有时钟或复位。VCD 位于被忽略的 `target/waveforms`，可用上述命令重建。
 
+SubwordRead 模块测试：`./scripts/sbt-local.sh 'testOnly riscvsingle.lsu.SubwordReadSpec'`。生成并查看两个宽度的波形：
+
+```bash
+make test-subwordread-wave SBT=./scripts/sbt-local.sh
+gtkwave target/waveforms/subwordread32.vcd waves/subwordread32.gtkw
+gtkwave target/waveforms/subwordread64.vcd waves/subwordread64.gtkw
+```
+
+预选信号包含输入、输出和逐级选择的字、半字、字节。时钟仅供测试观察，生产模块没有时钟或复位。
+
+DTIM 模块测试：`./scripts/sbt-local.sh 'testOnly riscvsingle.lsu.DTIMSpec'`。生成并查看两个宽度的波形：
+
+```bash
+make test-dtim-wave SBT=./scripts/sbt-local.sh
+gtkwave target/waveforms/dtim32.vcd waves/dtim32.gtkw
+gtkwave target/waveforms/dtim64.vcd waves/dtim64.gtkw
+```
+
+预选信号包含时钟、读写使能、字节掩码、地址/字索引、写数据和读数据；可以观察局部更新、禁止写入与容量回绕。
+
+LSU 字与子字模块测试：`./scripts/sbt-local.sh 'testOnly riscvsingle.lsu.LSUSpec riscvsingle.lsu.LSUSubwordSpec'`。生成并查看 RV32 波形：
+
+```bash
+make test-lsu-wave SBT=./scripts/sbt-local.sh
+gtkwave target/waveforms/lsu32.vcd waves/lsu32.gtkw
+```
+
+预选信号同时显示原始请求、实际读写使能、掩码和子字处理前后的数据，便于检查对齐门控与符号扩展。
+
 ## 配置与目录
 
 SwByteMask 使用 `sbt "runMain riscvsingle.GenerateSwByteMask 64 generated/swbytemask64"`。两个可选参数依次为原生数据位宽和输出目录，默认 32、`generated/swbytemask`；Makefile 对应 `WIDTH` 和 `SWBYTEMASK_TARGET_DIR`。位宽只允许 32/64，模块没有时钟、复位或存储状态，不使用存储深度等共享配置；独立 64 位模块不改变 CPU 的 RV32 限制。
 
 SubwordWrite 使用 `sbt "runMain riscvsingle.GenerateSubwordWrite 64 generated/subwordwrite64"`。两个可选参数依次为数据位宽和输出目录，默认 32、`generated/subwordwrite`；Makefile 对应 `WIDTH` 和 `SUBWORDWRITE_TARGET_DIR`。位宽仅允许 32/64，不改变整机 RV32 范围。
+
+SubwordRead 使用 `sbt "runMain riscvsingle.GenerateSubwordRead 64 generated/subwordread64"`。可选参数依次为数据位宽和输出目录，默认 32、`generated/subwordread`；Makefile 对应 `WIDTH` 和 `SUBWORDREAD_TARGET_DIR`。位宽仅允许 32/64，不改变整机 RV32 范围。
+
+DTIM 使用 `sbt "runMain riscvsingle.GenerateDTIM 64 64 generated/dtim64"`。可选参数依次为数据位宽、原生字深度和输出目录，默认 32、64、`generated/dtim`；Makefile 对应 `WIDTH`、`DMEM_DEPTH` 和 `DTIM_TARGET_DIR`。深度为不小于 2 的二次幂，总容量不超过 2^32 字节；独立 64 位配置每字为 8 字节，不改变下述 RV32 CpuConfig 的深度单位。
 
 `CpuConfig` 默认值为 `xlen=32`、`imemDepth=64`、`dmemDepth=64`、`resetVector=0`、`instructionInitFile=None`。存储深度以 32 位字计，复位地址以字节计。配置类负责 elaboration 前的参数检查。RiscvSingle 将同一配置对象传给三个子模块：IEU 再传给 Datapath，当前仅消费 `xlen`；IROM 消费 `imemDepth` 和 `instructionInitFile`，地址宽度采用 `xlen`；IFU 使用 `xlen`、`resetVector` 并将配置传给 IROM；LSU 使用 `xlen` 和 `dmemDepth`。
 

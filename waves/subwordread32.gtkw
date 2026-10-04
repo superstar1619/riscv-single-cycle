@@ -1,0 +1,14 @@
+[timestart] 0
+[size] 1400 800
+[signals_width] 280
+[zoom] -2.0
+@28
+SubwordReadHarness.clock
+SubwordReadHarness.io_Funct3
+SubwordReadHarness.io_ByteOffset
+@22
+SubwordReadHarness.io_ReadDataWord
+SubwordReadHarness.dut.SelectedWord
+SubwordReadHarness.dut.SelectedHalfword
+SubwordReadHarness.dut.SelectedByte
+SubwordReadHarness.io_ReadData

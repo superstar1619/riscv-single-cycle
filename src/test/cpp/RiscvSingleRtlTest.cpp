@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
             {0x48}, {25}, {100, true, 25}, {0x50}
         };
         const std::vector<ExpectedCycle> expanded = {
-            {31}, {511}, {511, true, 31}, {0}, {508}, {7},
+            {31}, {511}, {508, true, 31}, {0}, {508}, {7},
             {252, true, 7}, {508}, {100, true, 31}, {0x12c},
             {104, true, 0x128}, {108, true, 31}, {0x134}
         };

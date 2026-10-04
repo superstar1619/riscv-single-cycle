@@ -1,0 +1,21 @@
+[timestart] 0
+[size] 1500 850
+[signals_width] 310
+[zoom] -2.0
+@28
+SubwordLSUHarness.clock
+SubwordLSUHarness.io_MemRW
+SubwordLSUHarness.io_MemWrite
+SubwordLSUHarness.io_Funct3
+SubwordLSUHarness.dut.MemRead
+SubwordLSUHarness.dut.MemWrite
+SubwordLSUHarness.dut.LoadAllowed
+@22
+SubwordLSUHarness.dut.ByteMask
+SubwordLSUHarness.io_IEUAdr
+SubwordLSUHarness.dut.ByteOffset
+SubwordLSUHarness.dut.dtim.WordIndex
+SubwordLSUHarness.io_WriteData
+SubwordLSUHarness.dut.WriteDataWord
+SubwordLSUHarness.dut.ReadDataWord
+SubwordLSUHarness.io_ReadData
