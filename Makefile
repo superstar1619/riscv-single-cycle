@@ -17,8 +17,9 @@ RESET_VECTOR ?= 0
 LSU_TARGET_DIR ?= generated/lsu
 DMEM_DEPTH ?= 64
 CPU_TARGET_DIR ?= generated/riscv-single
+WAVE_DIR ?= target/waveforms
 
-.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom generate-ifu generate-lsu generate-cpu test test-rtl clean
+.PHONY: generate generate-cmp generate-alu generate-regfile generate-controller generate-datapath generate-ieu generate-irom generate-ifu generate-lsu generate-cpu test test-rtl test-wave clean
 
 generate:
 	$(SBT) "runMain riscvsingle.GenerateExtend $(WIDTH) $(TARGET_DIR)"
@@ -58,6 +59,11 @@ test:
 
 test-rtl:
 	VERILATOR="$(VERILATOR)" ./scripts/test-rtl.sh
+
+test-wave:
+	$(SBT) 'testOnly riscvsingle.RiscvSingleSpec -- -z "Code Example 2.16"'
+	mkdir -p "$(WAVE_DIR)"
+	cp test_run_dir/RiscvSingle_should_execute_Code_Example_216_and_generate_its_waveform/RiscvSingleHarness.vcd "$(WAVE_DIR)/code-example-2.16.vcd"
 
 clean:
 	$(SBT) clean

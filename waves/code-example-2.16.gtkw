@@ -1,0 +1,29 @@
+[timestart] 0
+[size] 1400 800
+[signals_width] 260
+[zoom] 1.0
+@28
+RiscvSingleHarness.clock
+RiscvSingleHarness.reset
+@22
+RiscvSingleHarness.dut.PC
+RiscvSingleHarness.dut.Instr
+RiscvSingleHarness.dut.PCPlus4
+@28
+RiscvSingleHarness.dut.PCSrc
+@22
+RiscvSingleHarness.dut.ieu.dp.SrcA
+RiscvSingleHarness.dut.ieu.dp.SrcB
+RiscvSingleHarness.dut.ieu.dp.Result
+RiscvSingleHarness.dut.ieu.dp.ALUResult
+RiscvSingleHarness.io_IEUAdr
+RiscvSingleHarness.io_WriteData
+@28
+RiscvSingleHarness.io_MemWrite
+@22
+RiscvSingleHarness.dut.ReadData
+RiscvSingleHarness.dut.ieu.dp.rf.rf_0
+RiscvSingleHarness.dut.ieu.dp.rf.rf_2
+RiscvSingleHarness.dut.ieu.dp.rf.rf_3
+RiscvSingleHarness.dut.ieu.dp.rf.rf_7
+RiscvSingleHarness.dut.ieu.dp.rf.rf_9

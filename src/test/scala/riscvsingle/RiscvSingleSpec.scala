@@ -24,12 +24,15 @@ class RiscvSingleSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   behavior of "RiscvSingle"
 
-  it should "execute the book program through the production top and emit the expected stores" in {
-    test(new RiscvSingleHarness(bookConfig)) { dut =>
+  it should "execute Code Example 2.16 and generate its waveform" in {
+    // Code Example 2.16, p. 68: programs/riscvtest.s and its memfile.
+    test(new RiscvSingleHarness(bookConfig)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
       // Expected address ALU output for each actually executed instruction,
       // including the sum output when the selected ALUResult is logical/slt.
       val addresses = Seq(5L, 12L, 3L, 8L, 19L, 11L, 0x48L, 5L, 0x28L,
         0xfffffffeL, 12L, 7L, 96L, 96L, 18L, 0x48L, 25L, 100L, 0x50L)
+      dut.reset.poke(true.B)
+      dut.clock.step(2) // Hold synchronous reset over two rising clock edges.
       dut.reset.poke(false.B)
       for ((address, cycle) <- addresses.zipWithIndex) {
         dut.io.IEUAdr.expect(BigInt(address).U)

@@ -36,6 +36,8 @@ RiscvSingle 接入同一 `CpuConfig` 并连接 IFU、IEU、LSU，保留书中的
 
 **项目已按用户指示完成收尾并结束。** 实现范围、模块交付、参数、用户核验要求、验证结果及复现方式见 [项目总结报告](docs/project-summary.md)。
 
+后续按用户要求补充 [Code Example 2.16 汇编程序](programs/riscvtest.s)和整机波形入口；其机器码与已有 `programs/riscvtest.memfile` 的前 21 项一致。运行 `make test-wave SBT=./scripts/sbt-local.sh` 可生成 `target/waveforms/code-example-2.16.vcd`，再用 `gtkwave target/waveforms/code-example-2.16.vcd waves/code-example-2.16.gtkw` 查看预选信号。详见 [程序与波形报告](docs/13-code-example-2.16.md)。
+
 ## 构建与验证
 
 版本：JDK 17、sbt 1.10.7、Scala 2.13.14、Chisel 3.6.1、chiseltest 0.6.2。
