@@ -3,7 +3,7 @@ package riscvsingle.ieu
 import chisel3._
 import chisel3.util.{Cat, MuxLookup}
 
-/** Full RV32 function fields, comparison flags, and datapath controls. */
+/** RV32 功能字段、寄存器比较标志与数据通路控制；编码位宽与指令字段一致。 */
 final class ControllerIO extends Bundle {
   val Op = Input(UInt(7.W))
   val Eq = Input(Bool())
@@ -23,14 +23,13 @@ final class ControllerIO extends Bundle {
   val ALUControl = Output(UInt(2.W))
 }
 
-/** Combinational RV32I controller, Chapter 7, Section 7.1.4, pp. 311-314.
-  * Full function legality gates all controls; unsupported instructions produce
-  * zero controls. This module does not implement illegal-instruction traps.
+/** 教材第 7 章 §7.1.4，pp. 311–314：RV32I 纯组合译码，无时钟、复位或状态。
+  * 完整功能字段的合法性门控所有控制输出；不支持的指令输出零控制，不产生异常。
   */
 final class Controller extends RawModule {
   val io = IO(new ControllerIO)
 
-  val controls = Wire(UInt(13.W))
+  val Controls = Wire(UInt(13.W)).suggestName("controls")
   val Branch = Wire(Bool())
   val Jump = Wire(Bool())
   val BranchTaken = Wire(Bool())
@@ -60,8 +59,8 @@ final class Controller extends RawModule {
   ))
 
   // RegWrite_ImmSrc_ALUSrc_ALUOp_ALUResultSrc_MemRW_ResultSrc_Branch_Jump
-  // Don't-care controls are zero, including R-type ImmSrc and LUI ALUSrc/ALUOp.
-  controls := Mux(LegalInstr, MuxLookup(io.Op, 0.U(13.W))(Seq(
+  // 无关控制位固定为零，包括 R 型 ImmSrc 与 LUI 的 ALUSrc/ALUOp；非法指令同样归零。
+  Controls := Mux(LegalInstr, MuxLookup(io.Op, 0.U(13.W))(Seq(
     0x33.U -> "b1000001000000".U(13.W), // R:     1_000_00_1_0_00_0_0_0
     0x13.U -> "b1000011000000".U(13.W), // I:     1_000_01_1_0_00_0_0_0
     0x03.U -> "b1000010010100".U(13.W), // load:  1_000_01_0_0_10_1_0_0
@@ -73,16 +72,16 @@ final class Controller extends RawModule {
     0x17.U -> "b1100110000000".U(13.W)  // auipc: 1_100_11_0_0_00_0_0_0
   )), 0.U(13.W))
 
-  io.RegWrite := controls(12)
-  io.ImmSrc := controls(11, 9)
-  io.ALUSrc := controls(8, 7)
-  ALUOp := controls(6)
-  io.ALUResultSrc := controls(5)
-  io.MemRW := controls(4, 3)
+  io.RegWrite := Controls(12)
+  io.ImmSrc := Controls(11, 9)
+  io.ALUSrc := Controls(8, 7)
+  ALUOp := Controls(6)
+  io.ALUResultSrc := Controls(5)
+  io.MemRW := Controls(4, 3)
   io.MemWrite := io.MemRW(0)
-  io.ResultSrc := controls(2)
-  Branch := controls(1)
-  Jump := controls(0)
+  io.ResultSrc := Controls(2)
+  Branch := Controls(1)
+  Jump := Controls(0)
   io.Jump := Jump
 
   val BranchFlag = Wire(Bool())

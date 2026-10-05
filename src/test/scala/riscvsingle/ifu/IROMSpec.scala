@@ -124,8 +124,10 @@ class IROMSpec extends AnyFlatSpec with ChiselScalatestTester {
   it should "emit two ports and an asynchronous ROM with optional initialization" in {
     for (file <- Seq(None, Some(bookFile))) {
       val targetDir = Files.createTempDirectory("irom-interface-")
-      val verilog = (new ChiselStage).emitVerilog(new IROM(CpuConfig(instructionInitFile = file)),
-        Array("--target-dir", targetDir.toString))
+      val verilog = (new ChiselStage).emitVerilog(
+        new IROM(CpuConfig(instructionInitFile = file)),
+        Array("--target-dir", targetDir.toString)
+      )
       val top = verilog.split("module IROM\\(")(1).split("\\);", 2)(0)
       val portPattern = "(?m)^\\s*(input|output)\\s+(?:\\[(\\d+):0\\]\\s+)?(\\w+)".r
       val ports = portPattern.findAllMatchIn(top).map { port =>
@@ -133,7 +135,8 @@ class IROMSpec extends AnyFlatSpec with ChiselScalatestTester {
         port.group(3) -> (port.group(1), width)
       }.toMap
       assert(ports == Map("io_a" -> ("input", 32), "io_rd" -> ("output", 32)))
-      assert(verilog.contains("reg [31:0] ROM [0:63];"), "Default ROM must have 64 32-bit entries")
+      assert(verilog.contains("reg [31:0] ROM [0:63];"),
+        "Default ROM must have 64 32-bit entries")
       assert(!"always\\s*@\\s*\\(posedge".r.findFirstIn(verilog).isDefined,
         "Asynchronous read must not depend on a rising clock edge")
       assert(verilog.contains("$readmemh") == file.isDefined,

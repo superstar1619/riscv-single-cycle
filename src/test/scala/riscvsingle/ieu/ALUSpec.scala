@@ -29,8 +29,14 @@ class ALUSpec extends AnyFlatSpec with ChiselScalatestTester {
   private def signed(value: BigInt, dataWidth: Int): BigInt =
     if (value.testBit(dataWidth - 1)) value - (BigInt(1) << dataWidth) else value
 
-  private def check(dut: ALUHarness, dataWidth: Int, a: BigInt, b: BigInt,
-      control: Int, funct3: Int): Unit = {
+  private def check(
+    dut: ALUHarness,
+    dataWidth: Int,
+    a: BigInt,
+    b: BigInt,
+    control: Int,
+    funct3: Int
+  ): Unit = {
     val mask = (BigInt(1) << dataWidth) - 1
     val subtract = (control & 2) != 0
     val address = (if (subtract) a - b else a + b) & mask
@@ -56,8 +62,15 @@ class ALUSpec extends AnyFlatSpec with ChiselScalatestTester {
     expectOutputs(dut, a, b, control, funct3, result, address)
   }
 
-  private def expectOutputs(dut: ALUHarness, a: BigInt, b: BigInt,
-      control: Int, funct3: Int, result: BigInt, address: BigInt): Unit = {
+  private def expectOutputs(
+    dut: ALUHarness,
+    a: BigInt,
+    b: BigInt,
+    control: Int,
+    funct3: Int,
+    result: BigInt,
+    address: BigInt
+  ): Unit = {
     dut.io.SrcA.poke(a.U)
     dut.io.SrcB.poke(b.U)
     dut.io.ALUControl.poke(control.U)
@@ -82,7 +95,8 @@ class ALUSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
 
-    it should s"match independent arithmetic and both outputs on random $dataWidth-bit operands" in {
+    it should (s"match independent arithmetic and both outputs on random " +
+      s"$dataWidth-bit operands") in {
       test(new ALUHarness(dataWidth)) { dut =>
         val random = new Random(0x215A1L + dataWidth)
         for (_ <- 0 until 500) {
@@ -128,7 +142,8 @@ class ALUSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
 
-    it should s"shift by every amount while ignoring high SrcB bits only for shifts at $dataWidth bits" in {
+    it should (s"shift by every amount while ignoring high SrcB bits only for shifts " +
+      s"at $dataWidth bits") in {
       test(new ALUHarness(dataWidth)) { dut =>
         val mask = (BigInt(1) << dataWidth) - 1
         val signBit = BigInt(1) << (dataWidth - 1)
@@ -146,7 +161,8 @@ class ALUSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   for (dataWidth <- Seq(1, 4, 3, 5)) {
-    it should s"match all operand pairs for the supported control cases at $dataWidth bits" in {
+    it should (s"match all operand pairs for the supported control cases at $dataWidth " +
+      s"bits") in {
       test(new ALUHarness(dataWidth)) { dut =>
         for (a <- 0 until (1 << dataWidth); b <- 0 until (1 << dataWidth);
             (control, funct3) <- cases) {

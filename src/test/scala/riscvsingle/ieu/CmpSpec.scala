@@ -24,8 +24,14 @@ class CmpSpec extends AnyFlatSpec with ChiselScalatestTester {
     if (value >= halfRange) value - (BigInt(1) << dataWidth) else value
   }
 
-  private def expectFlags(dut: CmpHarness, r1: BigInt, r2: BigInt,
-      eq: Boolean, lt: Boolean, ltu: Boolean): Unit = {
+  private def expectFlags(
+    dut: CmpHarness,
+    r1: BigInt,
+    r2: BigInt,
+    eq: Boolean,
+    lt: Boolean,
+    ltu: Boolean
+  ): Unit = {
     dut.io.R1.poke(r1.U)
     dut.io.R2.poke(r2.U)
     dut.io.Eq.expect(eq.B)
@@ -33,8 +39,12 @@ class CmpSpec extends AnyFlatSpec with ChiselScalatestTester {
     dut.io.LTU.expect(ltu.B)
   }
 
-  private def expectComparison(dut: CmpHarness, r1: BigInt, r2: BigInt,
-      dataWidth: Int): Unit = {
+  private def expectComparison(
+    dut: CmpHarness,
+    r1: BigInt,
+    r2: BigInt,
+    dataWidth: Int
+  ): Unit = {
     expectFlags(dut, r1, r2, r1 == r2,
       signedValue(r1, dataWidth) < signedValue(r2, dataWidth), r1 < r2)
   }
@@ -42,7 +52,8 @@ class CmpSpec extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "Cmp"
 
   for (dataWidth <- Seq(32, 64)) {
-    it should s"compare boundary patterns and detect a difference in every bit at $dataWidth bits" in {
+    it should (s"compare boundary patterns and detect a difference in every bit at " +
+      s"$dataWidth bits") in {
       test(new CmpHarness(dataWidth)) { dut =>
         val mask = (BigInt(1) << dataWidth) - 1
         val signBit = BigInt(1) << (dataWidth - 1)
@@ -59,7 +70,8 @@ class CmpSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
 
-    it should s"distinguish signed and unsigned ordering at hand-checked boundaries at $dataWidth bits" in {
+    it should (s"distinguish signed and unsigned ordering at hand-checked boundaries " +
+      s"at $dataWidth bits") in {
       test(new CmpHarness(dataWidth)) { dut =>
         val minSigned = BigInt(1) << (dataWidth - 1)
         val maxSigned = minSigned - 1

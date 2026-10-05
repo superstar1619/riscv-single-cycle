@@ -44,10 +44,17 @@ private class IEUWithLSUHarness extends Module {
 
 class LSUSubwordSpec extends AnyFlatSpec with ChiselScalatestTester {
   private val wordMask = (BigInt(1) << 32) - 1
+
   private def hex(value: String): BigInt = BigInt(value, 16)
 
-  private def request(dut: SubwordLSUHarness, address: BigInt, funct3: Int,
-      memRW: Int, memWrite: Boolean, data: BigInt = 0): Unit = {
+  private def request(
+    dut: SubwordLSUHarness,
+    address: BigInt,
+    funct3: Int,
+    memRW: Int,
+    memWrite: Boolean,
+    data: BigInt = 0
+  ): Unit = {
     dut.io.IEUAdr.poke(address.U)
     dut.io.Funct3.poke(funct3.U)
     dut.io.MemRW.poke(memRW.U)
@@ -63,8 +70,12 @@ class LSUSubwordSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   // 不推进时钟，检查地址和功能编码的组合更新。
-  private def read(dut: SubwordLSUHarness, address: BigInt,
-      funct3: Int, expected: BigInt): Unit = {
+  private def read(
+    dut: SubwordLSUHarness,
+    address: BigInt,
+    funct3: Int,
+    expected: BigInt
+  ): Unit = {
     request(dut, address, funct3, 2, false)
     dut.io.ReadData.expect(expected.U)
   }
@@ -90,8 +101,12 @@ class LSUSubwordSpec extends AnyFlatSpec with ChiselScalatestTester {
     (if (signed) value - (BigInt(1) << (bytes * 8)) else value) & wordMask
   }
 
-  private def store(model: Array[Int], address: BigInt, funct3: Int,
-      data: BigInt): Unit = {
+  private def store(
+    model: Array[Int],
+    address: BigInt,
+    funct3: Int,
+    data: BigInt
+  ): Unit = {
     val bytes = size(funct3, store = true)
     if (bytes != 0 && address % bytes == 0) {
       val base = (address % model.length).toInt

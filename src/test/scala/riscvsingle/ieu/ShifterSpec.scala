@@ -21,16 +21,27 @@ private class ShifterHarness(dataWidth: Int) extends Module {
 class ShifterSpec extends AnyFlatSpec with ChiselScalatestTester {
   // Ordinary software shifts form an oracle independent of the funnel's
   // source concatenation and complemented right-shift offset.
-  private def reference(value: BigInt, amount: Int, right: Boolean,
-      arithmetic: Boolean, dataWidth: Int): BigInt = {
+  private def reference(
+    value: BigInt,
+    amount: Int,
+    right: Boolean,
+    arithmetic: Boolean,
+    dataWidth: Int
+  ): BigInt = {
     val signed = if (value.testBit(dataWidth - 1)) value - (BigInt(1) << dataWidth) else value
     val shifted = if (!right) value << amount
       else if (arithmetic) signed >> amount else value >> amount
     shifted & ((BigInt(1) << dataWidth) - 1)
   }
 
-  private def expectShift(dut: ShifterHarness, value: BigInt, amount: Int,
-      right: Boolean, arithmetic: Boolean, expected: BigInt): Unit = {
+  private def expectShift(
+    dut: ShifterHarness,
+    value: BigInt,
+    amount: Int,
+    right: Boolean,
+    arithmetic: Boolean,
+    expected: BigInt
+  ): Unit = {
     dut.io.A.poke(value.U)
     dut.io.Amt.poke(amount.U)
     dut.io.Right.poke(right.B)
@@ -41,7 +52,8 @@ class ShifterSpec extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "Shifter"
 
   for (dataWidth <- Seq(32, 64)) {
-    it should s"shift boundary patterns by every amount in all four control modes at $dataWidth bits" in {
+    it should (s"shift boundary patterns by every amount in all four control modes at " +
+      s"$dataWidth bits") in {
       test(new ShifterHarness(dataWidth)) { dut =>
         val mask = (BigInt(1) << dataWidth) - 1
         val signBit = BigInt(1) << (dataWidth - 1)
@@ -56,7 +68,8 @@ class ShifterSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
 
-    it should s"preserve zero shifts and handle maximum amounts and sign extension at $dataWidth bits" in {
+    it should (s"preserve zero shifts and handle maximum amounts and sign extension at " +
+      s"$dataWidth bits") in {
       test(new ShifterHarness(dataWidth)) { dut =>
         val mask = (BigInt(1) << dataWidth) - 1
         val signBit = BigInt(1) << (dataWidth - 1)
@@ -89,7 +102,8 @@ class ShifterSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
 
-    it should s"match an independent model for 1000 seeded random inputs at $dataWidth bits" in {
+    it should (s"match an independent model for 1000 seeded random inputs at " +
+      s"$dataWidth bits") in {
       test(new ShifterHarness(dataWidth)) { dut =>
         val random = new Random(0x7133L + dataWidth)
         for (_ <- 0 until 1000) {

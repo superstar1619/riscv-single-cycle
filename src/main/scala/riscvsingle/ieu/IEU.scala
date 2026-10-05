@@ -3,7 +3,7 @@ package riscvsingle.ieu
 import chisel3._
 import riscvsingle.config.CpuConfig
 
-/** RV32 execution interface, Chapter 7, Section 7.1, Figure 7.2 and Table 7.1. */
+/** 教材第 7 章 §7.1、图 7.2、表 7.1 的 RV32 执行接口；PC/PCPlus4/IEUAdr 为字节地址。 */
 final class IEUIO(config: CpuConfig) extends Bundle {
   val Instr = Input(UInt(32.W))
   val PC = Input(UInt(config.xlen.W))
@@ -17,11 +17,10 @@ final class IEUIO(config: CpuConfig) extends Bundle {
   val ReadData = Input(UInt(config.xlen.W))
 }
 
-/** RV32 integer execution unit, Chapter 7, Section 7.1, Figure 7.2 and Table 7.1.
-  * Controller decodes Instr and receives equality, signed and unsigned comparisons.
-  * PC and memory state are supplied by the surrounding IFU and LSU; ReadData is
-  * the externally completed load value. Explicit clock and synchronous reset
-  * retain the reviewed Chapter 2 convention; reset blocks register writes only.
+/** 教材第 7 章 §7.1、图 7.2、表 7.1：RV32 整数执行单元。
+  * Controller 组合译码，并接收原始寄存器的相等、有符号和无符号比较结果。
+  * PC 和存储器状态由 IFU/LSU 提供；ReadData 已由外部完成子字处理。
+  * 显式 clk 和高有效同步 reset 沿用第 2 章接口：x0 清零、非零寄存器保持，复位抑制写入。
   */
 final class IEU(val config: CpuConfig = CpuConfig()) extends RawModule {
   val clk = IO(Input(Clock()))

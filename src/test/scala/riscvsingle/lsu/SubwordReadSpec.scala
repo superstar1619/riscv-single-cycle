@@ -19,8 +19,13 @@ private class SubwordReadHarness(dataWidth: Int) extends Module {
 
 class SubwordReadSpec extends AnyFlatSpec with ChiselScalatestTester {
   // 设置输入后立即检查组合输出；只有波形测试按需推进观察时钟。
-  private def check(dut: SubwordReadHarness, data: BigInt,
-      offset: Int, funct3: Int, expected: BigInt): Unit = {
+  private def check(
+    dut: SubwordReadHarness,
+    data: BigInt,
+    offset: Int,
+    funct3: Int,
+    expected: BigInt
+  ): Unit = {
     dut.io.ReadDataWord.poke(data.U)
     dut.io.ByteOffset.poke(offset.U)
     dut.io.Funct3.poke(funct3.U)
@@ -28,6 +33,7 @@ class SubwordReadSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   private def hex(value: String): BigInt = BigInt(value, 16)
+
   private def wordMask(width: Int): BigInt = (BigInt(1) << width) - 1
 
   // 软件按小端字节数组取值，负数用减去 2^位数计算，不复用硬件选择器。

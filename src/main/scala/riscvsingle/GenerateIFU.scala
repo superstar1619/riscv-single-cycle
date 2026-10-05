@@ -4,7 +4,7 @@ import chisel3.stage.ChiselStage
 import riscvsingle.config.CpuConfig
 import riscvsingle.ifu.IFU
 
-/** Optional arguments: depth, directory, hex file (or -), reset byte address. */
+/** 独立生成 IFU；参数依次为字深度、输出目录、镜像文件（或 -）、复位字节地址。 */
 object GenerateIFU extends App {
   require(args.length <= 4,
     "Usage: GenerateIFU [imemDepth] [targetDir] [instructionInitFile|-] [resetVector]")
@@ -17,5 +17,8 @@ object GenerateIFU extends App {
   }.getOrElse(BigInt(0))
   val config = CpuConfig(imemDepth = depth, resetVector = resetVector,
     instructionInitFile = if (file == "-") None else Some(file))
-  (new ChiselStage).emitVerilog(new IFU(config), Array("--target-dir", targetDir))
+  (new ChiselStage).emitVerilog(
+    new IFU(config),
+    Array("--target-dir", targetDir)
+  )
 }

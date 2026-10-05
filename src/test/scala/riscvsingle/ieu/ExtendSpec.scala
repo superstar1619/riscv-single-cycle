@@ -43,12 +43,19 @@ class ExtendSpec extends AnyFlatSpec with ChiselScalatestTester {
     val mapping = positions(selector)
     val raw = value & ((BigInt(1) << mapping.length) - 1)
     mapping.zipWithIndex.foldLeft(BigInt(0)) { case (instruction, (destination, source)) =>
-      if (destination >= 0 && raw.testBit(source)) instruction.setBit(destination) else instruction
+      if (destination >= 0 && raw.testBit(source)) {
+        instruction.setBit(destination)
+      } else instruction
     }
   }
 
-  private def expectImmediate(dut: ExtendHarness, instruction: BigInt, selector: Int,
-      expected: BigInt, outputWidth: Int): Unit = {
+  private def expectImmediate(
+    dut: ExtendHarness,
+    instruction: BigInt,
+    selector: Int,
+    expected: BigInt,
+    outputWidth: Int
+  ): Unit = {
     dut.io.Instr.poke((instruction >> 7).U)
     dut.io.ImmSrc.poke(selector.U)
     dut.io.ImmExt.expect((expected & ((BigInt(1) << outputWidth) - 1)).U)
@@ -69,7 +76,8 @@ class ExtendSpec extends AnyFlatSpec with ChiselScalatestTester {
             if (bit == mapping.length - 1) -halfRange else BigInt(1) << bit
           }
           for (value <- boundaries ++ walkingBits) {
-            expectImmediate(dut, encodeImmediate(value, selector), selector, value, outputWidth)
+            expectImmediate(dut, encodeImmediate(value, selector), selector, value,
+              outputWidth)
           }
 
           // Bits outside this format must not affect the selected immediate.
@@ -83,7 +91,8 @@ class ExtendSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
 
-    it should s"map or ignore every architectural input bit for I/S/B/J/U at $outputWidth bits" in {
+    it should (s"map or ignore every architectural input bit for I/S/B/J/U at " +
+      s"$outputWidth bits") in {
       test(new ExtendHarness(outputWidth)) { dut =>
         for (selector <- 0 until 5; bit <- 0 until 32) {
           // One-hot and one-cold inputs isolate each source bit, including
@@ -96,7 +105,8 @@ class ExtendSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
 
-    it should s"preserve U-format signed boundaries and twelve low zero bits at $outputWidth bits" in {
+    it should (s"preserve U-format signed boundaries and twelve low zero bits at " +
+      s"$outputWidth bits") in {
       test(new ExtendHarness(outputWidth)) { dut =>
         val cases = Seq(
           BigInt("00000000", 16) -> BigInt(0),
@@ -122,7 +132,8 @@ class ExtendSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
 
-    it should s"match independent decoding of 1000 random instructions at $outputWidth bits" in {
+    it should (s"match independent decoding of 1000 random instructions at " +
+      s"$outputWidth bits") in {
       test(new ExtendHarness(outputWidth)) { dut =>
         val random = new Random(0x215L)
         for (_ <- 0 until 1000) {

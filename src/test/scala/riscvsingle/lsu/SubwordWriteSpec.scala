@@ -19,10 +19,10 @@ private class SubwordWriteHarness(dataWidth: Int) extends Module {
 class SubwordWriteSpec extends AnyFlatSpec with ChiselScalatestTester {
   // 设置输入后立即检查，不推进时钟；调用者按需保留波形观察周期。
   private def check(
-      dut: SubwordWriteHarness,
-      data: BigInt,
-      funct3: Int,
-      expected: BigInt
+    dut: SubwordWriteHarness,
+    data: BigInt,
+    funct3: Int,
+    expected: BigInt
   ): Unit = {
     dut.io.WriteData.poke(data.U)
     dut.io.Funct3.poke(funct3.U)

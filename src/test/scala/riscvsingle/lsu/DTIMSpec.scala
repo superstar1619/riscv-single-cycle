@@ -22,7 +22,9 @@ private class DTIMHarness(dataWidth: Int, depth: Int = 64) extends Module {
 
 class DTIMSpec extends AnyFlatSpec with ChiselScalatestTester {
   private def hex(value: String): BigInt = BigInt(value, 16)
+
   private def wordMask(width: Int): BigInt = (BigInt(1) << width) - 1
+
   private def fullByteMask(width: Int): BigInt = (BigInt(1) << (width / 8)) - 1
 
   private def initializeInputs(dut: DTIMHarness): Unit = {
@@ -35,8 +37,12 @@ class DTIMSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   // 初始化只走生产写口；写入前不读取或假定 RAM 上电值。
-  private def write(dut: DTIMHarness, address: BigInt,
-      data: BigInt, mask: BigInt): Unit = {
+  private def write(
+    dut: DTIMHarness,
+    address: BigInt,
+    data: BigInt,
+    mask: BigInt
+  ): Unit = {
     dut.io.MemRead.poke(false.B)
     dut.io.Adr.poke(address.U)
     dut.io.WriteDataWord.poke(data.U)

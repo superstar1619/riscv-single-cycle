@@ -59,13 +59,18 @@ private class ControlledDatapathHarness extends Module {
 
 class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
   private val mask = (BigInt(1) << 32) - 1
+
   private def u32(value: BigInt): BigInt = value & mask
+
   private def fields(rs1: Int = 0, rs2: Int = 0, rd: Int = 0): BigInt =
     (BigInt(rs2) << 20) | (BigInt(rs1) << 15) | (BigInt(rd) << 7)
+
   private def uType(immediate: Int, rd: Int, opcode: Int): BigInt =
     (BigInt(immediate & 0xfffff) << 12) | fields(rd = rd) | opcode
+
   private def iType(immediate: Int, rs1: Int, rd: Int, opcode: Int): BigInt =
     (BigInt(immediate & 0xfff) << 20) | fields(rs1 = rs1, rd = rd) | opcode
+
   private def jType(immediate: Int, rd: Int): BigInt = {
     val imm = immediate & 0x1fffff
     (BigInt((imm >> 20) & 1) << 31) | (BigInt((imm >> 1) & 1023) << 21) |
@@ -175,12 +180,14 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "write back ALU results, link addresses, and memory data with memory taking priority" in {
+  it should ("write back ALU results, link addresses, and memory data with memory " +
+    "taking priority") in {
     test(new DatapathHarness) { dut =>
       defaults(dut)
       write(dut, 1, 12)
       write(dut, 2, 7)
-      for (alternate <- Seq(false, true); jump <- Seq(false, true); memory <- Seq(false, true)) {
+      for (alternate <- Seq(false, true); jump <- Seq(false, true);
+        memory <- Seq(false, true)) {
         defaults(dut)
         // Instruction funct3 bits are zero; the explicit port requests OR.
         dut.io.Instr.poke(fields(rs1 = 1, rs2 = 2, rd = 3).U)
@@ -278,7 +285,8 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "clear JALR target bit zero without changing arithmetic writeback or source aliases" in {
+  it should ("clear JALR target bit zero without changing arithmetic writeback or " +
+    "source aliases") in {
     test(new DatapathHarness) { dut =>
       defaults(dut)
       for (index <- 1 until 32) write(dut, index, BigInt(index))
@@ -297,7 +305,9 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.PCPlus4.poke(0xabc.U)
         dut.io.RegWrite.poke(true.B)
         val raw = u32(base + immediate)
-        val result = if (alternate) { if (jump) BigInt(0xabc) else u32(BigInt(immediate)) } else raw
+        val result = if (alternate) {
+          if (jump) BigInt(0xabc) else u32(BigInt(immediate))
+        } else raw
         dut.io.IEUAdr.expect(((raw / 2) * 2).U)
         dut.clock.step()
         val newBase = if (rd == 1) result else base
@@ -357,8 +367,10 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "match an independent register scoreboard through randomized control sequences" in {
-    test(new DatapathHarness(CpuConfig(imemDepth = 128, dmemDepth = 256, resetVector = 0x100))) { dut =>
+  it should ("match an independent register scoreboard through randomized control " +
+    "sequences") in {
+    test(new DatapathHarness(CpuConfig(imemDepth = 128, dmemDepth = 256,
+      resetVector = 0x100))) { dut =>
       defaults(dut)
       val random = new Random(0x215)
       val registers = Array.fill[BigInt](32)(BigInt(0))
@@ -369,7 +381,8 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
       def signed(value: BigInt, width: Int): BigInt =
         if (value.testBit(width - 1)) value - (BigInt(1) << width) else value
       def immediate(instruction: BigInt, format: Int): BigInt = {
-        def bits(hi: Int, lo: Int): BigInt = (instruction >> lo) & ((BigInt(1) << (hi - lo + 1)) - 1)
+        def bits(hi: Int, lo: Int): BigInt =
+          (instruction >> lo) & ((BigInt(1) << (hi - lo + 1)) - 1)
         format match {
           case 0 => signed(bits(31, 20), 12)
           case 1 => signed((bits(31, 25) << 5) | bits(11, 7), 12)
@@ -403,7 +416,9 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
         val resetting = iteration % 37 == 0
         val enable = random.nextBoolean()
         val a = if ((selection & 2) != 0) pc else registers(rs1)
-        val b = if ((selection & 1) != 0) u32(immediate(instruction, format)) else registers(rs2)
+        val b = if ((selection & 1) != 0) {
+          u32(immediate(instruction, format))
+        } else registers(rs2)
         val rawAddress = u32(if (sub) a - b else a + b)
         val result = (if (aluOp) funct3 else 0) match {
           case 0 => rawAddress
@@ -445,7 +460,9 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
         dut.clock.step()
         if (!resetting && enable && rd != 0) {
           registers(rd) = if (memory) readData
-            else if (alternate) { if (jump) linkAddress else u32(immediate(instruction, format)) }
+            else if (alternate) {
+              if (jump) linkAddress else u32(immediate(instruction, format))
+            }
             else result
         }
         observe()
@@ -454,7 +471,8 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "execute the book program with the reviewed Controller and test-side PC and memory" in {
+  it should ("execute the book program with the reviewed Controller and test-side PC " +
+    "and memory") in {
     test(new ControlledDatapathHarness) { dut =>
       val words = Seq("00500113", "00c00193", "ff718393", "0023e233", "0041f2b3",
         "004282b3", "02728863", "0041a233", "00020463", "00000293", "0023a233",
@@ -487,7 +505,8 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "elaborate the book ports and four child modules without implicit clock or reset" in {
+  it should ("elaborate the book ports and four child modules without implicit clock " +
+    "or reset") in {
     val targetDir = Files.createTempDirectory("datapath-interface-")
     val verilog = (new ChiselStage).emitVerilog(new Datapath,
       Array("--target-dir", targetDir.toString))
@@ -507,10 +526,12 @@ class DatapathSpec extends AnyFlatSpec with ChiselScalatestTester {
       "io_PC" -> ("input", 32), "io_PCPlus4" -> ("input", 32),
       "io_Instr" -> ("input", 32), "io_IEUAdr" -> ("output", 32),
       "io_WriteData" -> ("output", 32), "io_ReadData" -> ("input", 32)))
-    for ((module, instance) <- Seq("RegFile" -> "rf", "Extend" -> "ext", "Cmp" -> "cmp", "ALU" -> "alu")) {
+    for ((module, instance) <- Seq("RegFile" -> "rf", "Extend" -> "ext", "Cmp" -> "cmp",
+      "ALU" -> "alu")) {
       assert(verilog.contains(s"$module $instance ("))
     }
     assert(verilog.contains(".reset(rf_reset)"), "RegFile must receive the reset connection")
-    assert(verilog.contains("assign rf_reset = reset;"), "RegFile reset must follow the external reset")
+    assert(verilog.contains("assign rf_reset = reset;"),
+      "RegFile reset must follow the external reset")
   }
 }

@@ -79,7 +79,8 @@ class IFUSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "sample selected targets without masking address bits and wrap PCPlus4 to 32 bits" in {
+  it should ("sample selected targets without masking address bits and wrap PCPlus4 to " +
+    "32 bits") in {
     val waves = if (sys.env.get("GENERATE_WAVES").contains("1")) {
       Seq(WriteVcdAnnotation)
     } else Seq.empty
@@ -118,11 +119,13 @@ class IFUSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   for (vector <- Seq(0, 0x100)) {
-    it should s"synchronously reset to $vector only at rising edges with priority over target selection" in {
+    it should (s"synchronously reset to $vector only at rising edges with priority " +
+      s"over target selection") in {
       // A complete 128-word image verifies resetVector and depth reach the child IROM.
       val directory = Files.createDirectories(Paths.get("target/ifu-test-images"))
       val file = Files.createTempFile(directory, "ifu-reset-", ".hex")
-      val words = (0 until 128).map(index => f"${0x10000000L + index}%08x").mkString("", "\n", "\n")
+      val words = (0 until 128).map(index => f"${0x10000000L + index}%08x")
+        .mkString("", "\n", "\n")
       Files.write(file, words.getBytes(StandardCharsets.UTF_8))
       val config = CpuConfig(imemDepth = 128, resetVector = vector,
         instructionInitFile = Some(file.toString))
@@ -156,7 +159,8 @@ class IFUSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "execute the book program with hardware PC and instruction memory driving the reviewed IEU" in {
+  it should ("execute the book program with hardware PC and instruction memory driving " +
+    "the reviewed IEU") in {
     test(new IFUIEUHarness(bookConfig)) { dut =>
       val expectedPCs = Seq(0x00, 0x04, 0x08, 0x0c, 0x10, 0x14, 0x18, 0x1c,
         0x20, 0x28, 0x2c, 0x30, 0x34, 0x38, 0x3c, 0x40, 0x48, 0x4c, 0x50)

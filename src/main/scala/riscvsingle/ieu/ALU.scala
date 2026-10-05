@@ -3,7 +3,7 @@ package riscvsingle.ieu
 import chisel3._
 import chisel3.util.{Cat, Fill, MuxLookup, log2Ceil}
 
-/** Book-compatible ALU operands, controls, and separate address/result outputs. */
+/** 教材兼容的操作数与控制接口；IEUAdr 独立保留加减结果，供字节地址生成使用。 */
 final class ALUIO(dataWidth: Int) extends Bundle {
   val SrcA = Input(UInt(dataWidth.W))
   val SrcB = Input(UInt(dataWidth.W))
@@ -13,9 +13,9 @@ final class ALUIO(dataWidth: Int) extends Bundle {
   val IEUAdr = Output(UInt(dataWidth.W))
 }
 
-/** Combinational integer ALU, Chapter 7, Sections 7.1.3.1/.2/.4, pp. 304-308.
-  * ALUControl = {SubArith, ALUOp}. The controller enables SubArith for
-  * subtraction, signed/unsigned comparisons, and arithmetic right shifts.
+/** 教材第 7 章 §7.1.3.1/.2/.4，pp. 304–308：整数 ALU。
+  * 纯组合，无时钟、复位或状态；结果按 dataWidth 回绕，进位用于无符号比较。
+  * ALUControl = {SubArith, ALUOp}；减法、大小比较及算术右移由控制器使能 SubArith。
   */
 final class ALU(val dataWidth: Int = 32) extends RawModule {
   require(dataWidth > 0, "ALU dataWidth must be > 0")
@@ -24,7 +24,7 @@ final class ALU(val dataWidth: Int = 32) extends RawModule {
 
   val ALUOp = Wire(Bool())
   val SubArith = Wire(Bool())
-  val CondInvb = Wire(UInt(dataWidth.W))
+  val CondInvB = Wire(UInt(dataWidth.W)).suggestName("CondInvb")
   val SumExt = Wire(UInt((dataWidth + 1).W))
   val Carry = Wire(Bool())
   val Sum = Wire(UInt(dataWidth.W))
@@ -39,14 +39,13 @@ final class ALU(val dataWidth: Int = 32) extends RawModule {
 
   ALUOp := io.ALUControl(0)
   SubArith := io.ALUControl(1)
-  CondInvb := Mux(SubArith, ~io.SrcB, io.SrcB)
-  SumExt := (io.SrcA +& CondInvb) + SubArith.asUInt
+  CondInvB := Mux(SubArith, ~io.SrcB, io.SrcB)
+  SumExt := (io.SrcA +& CondInvB) + SubArith.asUInt
   Carry := SumExt(dataWidth)
   Sum := SumExt(dataWidth - 1, 0)
   io.IEUAdr := Sum
 
-  // The book's subtraction overflow correction supports signed slt even
-  // when the truncated difference has the wrong sign due to overflow.
+  // 教材减法溢出修正：即使截断差值的符号因溢出而反转，也保持有符号 slt 的语义。
   Overflow := (io.SrcA(dataWidth - 1) ^ io.SrcB(dataWidth - 1)) &
     (io.SrcA(dataWidth - 1) ^ Sum(dataWidth - 1))
   Neg := Sum(dataWidth - 1)
@@ -55,8 +54,7 @@ final class ALU(val dataWidth: Int = 32) extends RawModule {
   SLT := Mux(LT, 1.U(dataWidth.W), 0.U(dataWidth.W))
   SLTU := Mux(LTU, 1.U(dataWidth.W), 0.U(dataWidth.W))
 
-  // Preserve the ALU's positive-width parameter contract while reusing the
-  // power-of-two Shifter. Padding does not change the low dataWidth result.
+  // 保留 ALU 的任意正字宽契约，补齐到二次幂后复用 Shifter；低 dataWidth 位结果不变。
   private val shiftWidth = 1 << math.max(1, log2Ceil(dataWidth))
   val shifter = Module(new Shifter(shiftWidth))
   shifter.io.A := (if (shiftWidth == dataWidth) io.SrcA
@@ -67,8 +65,7 @@ final class ALU(val dataWidth: Int = 32) extends RawModule {
   shifter.io.SubArith := SubArith
   ShiftResult := shifter.io.Y(dataWidth - 1, 0)
 
-  // Loads/stores/branches/jal force addition independently of Funct3 when
-  // their controller sets ALUOp=0 and SubArith=0.
+  // 访存、分支和 jal 由控制器将 ALUOp/SubArith 置零，强制加法，不依赖 Funct3。
   ALUSelect := io.Funct3 & Fill(3, ALUOp)
   io.ALUResult := MuxLookup(ALUSelect, 0.U(dataWidth.W))(Seq(
     0.U -> Sum,

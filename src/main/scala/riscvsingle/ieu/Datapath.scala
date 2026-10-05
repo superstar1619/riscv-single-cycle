@@ -3,7 +3,7 @@ package riscvsingle.ieu
 import chisel3._
 import riscvsingle.config.CpuConfig
 
-/** Control, instruction, and memory interfaces from Code Example 2.15. */
+/** 教材 Code Example 2.15 的控制、指令与访存接口；PC/PCPlus4/IEUAdr 为字节地址。 */
 final class DatapathIO(config: CpuConfig) extends Bundle {
   val Funct3 = Input(UInt(3.W))
   val ALUResultSrc = Input(Bool())
@@ -24,9 +24,9 @@ final class DatapathIO(config: CpuConfig) extends Bundle {
   val ReadData = Input(UInt(config.xlen.W))
 }
 
-/** RV32 datapath, Code Example 2.15, p. 63.
-  * Control decoding and PC/memory state remain outside this module.
-  * Reset follows the reviewed RegFile: synchronous, active high, x0 only.
+/** 教材 Code Example 2.15，p. 63：RV32 数据通路，译码和 PC/存储器状态由外部提供。
+  * 运算与寄存器读取均为组合，寄存器写入在上升沿生效。
+  * 高有效同步 reset 仅清零 x0，并抑制写入；非零寄存器保值。
   */
 final class Datapath(val config: CpuConfig = CpuConfig()) extends RawModule {
   val clk = IO(Input(Clock()))

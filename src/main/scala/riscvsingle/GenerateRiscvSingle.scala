@@ -3,10 +3,13 @@ package riscvsingle
 import chisel3.stage.ChiselStage
 import riscvsingle.config.CpuConfig
 
-/** Optional arguments: instruction/data depths, directory, hex file (or -), reset address. */
+/** 生成整机；参数依次为指令/数据字深度、输出目录、镜像文件（或 -）、复位字节地址。 */
 object GenerateRiscvSingle extends App {
-  require(args.length <= 5,
-    "Usage: GenerateRiscvSingle [imemDepth] [dmemDepth] [targetDir] [instructionInitFile|-] [resetVector]")
+  require(
+    args.length <= 5,
+    "Usage: GenerateRiscvSingle [imemDepth] [dmemDepth] [targetDir] " +
+      "[instructionInitFile|-] [resetVector]"
+  )
   val imemDepth = args.headOption.map(_.toInt).getOrElse(64)
   val dmemDepth = args.lift(1).map(_.toInt).getOrElse(64)
   val targetDir = args.lift(2).getOrElse("generated/riscv-single")
@@ -17,5 +20,8 @@ object GenerateRiscvSingle extends App {
   }.getOrElse(BigInt(0))
   val config = CpuConfig(imemDepth = imemDepth, dmemDepth = dmemDepth,
     resetVector = resetVector, instructionInitFile = if (file == "-") None else Some(file))
-  (new ChiselStage).emitVerilog(new RiscvSingle(config), Array("--target-dir", targetDir))
+  (new ChiselStage).emitVerilog(
+    new RiscvSingle(config),
+    Array("--target-dir", targetDir)
+  )
 }

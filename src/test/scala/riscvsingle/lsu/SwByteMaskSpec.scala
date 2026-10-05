@@ -25,8 +25,12 @@ class SwByteMaskSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  private def expectMask(dut: SwByteMaskHarness, funct3: Int,
-      offset: Int, expected: BigInt): Unit = {
+  private def expectMask(
+    dut: SwByteMaskHarness,
+    funct3: Int,
+    offset: Int,
+    expected: BigInt
+  ): Unit = {
     dut.io.Funct3.poke(funct3.U)
     dut.io.ByteOffset.poke(offset.U)
     dut.io.ByteMask.expect(expected.U)
@@ -52,7 +56,8 @@ class SwByteMaskSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
 
-    it should s"match all function and offset combinations in both orders at $dataWidth bits" in {
+    it should (s"match all function and offset combinations in both orders at " +
+      s"$dataWidth bits") in {
       test(new SwByteMaskHarness(dataWidth)) { dut =>
         val cases = for (funct3 <- 0 until 8; offset <- 0 until dataWidth / 8)
           yield (funct3, offset)

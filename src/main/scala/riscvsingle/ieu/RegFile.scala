@@ -3,7 +3,7 @@ package riscvsingle.ieu
 import chisel3._
 import chisel3.util.log2Ceil
 
-/** Two combinational read ports and one synchronous write port. */
+/** 两个组合读口、一个同步写口；A1/A2/A3 是架构寄存器索引，不是字节地址。 */
 final class RegFileIO(dataWidth: Int, registerCount: Int) extends Bundle {
   private val addressWidth = log2Ceil(registerCount)
   val WE3 = Input(Bool())
@@ -15,10 +15,9 @@ final class RegFileIO(dataWidth: Int, registerCount: Int) extends Bundle {
   val RD2 = Output(UInt(dataWidth.W))
 }
 
-/** Register file, Code Example 2.15, pp. 63-64.
-  * Per review, all N entries are registers. Active-high synchronous reset
-  * clears only x0; normal writes exclude x0. x1..xN-1 have no reset value.
-  * A write becomes visible through both read ports after the rising edge.
+/** 教材 Code Example 2.15，pp. 63–64：全部 N 项均为寄存器状态。
+  * 高有效同步 reset 仅清零 x0，并优先于写入；x1..xN-1 无复位值，复位期间保值。
+  * 正常写入排除 x0，上升沿后两个组合读口可见新值，无边沿前写穿透。
   */
 final class RegFile(val dataWidth: Int = 32, val registerCount: Int = 32) extends RawModule {
   require(dataWidth > 0, "RegFile dataWidth must be > 0")
@@ -29,19 +28,21 @@ final class RegFile(val dataWidth: Int = 32, val registerCount: Int = 32) extend
   val reset = IO(Input(Bool()))
   val io = IO(new RegFileIO(dataWidth, registerCount))
 
-  // Every entry is stateful and uses its architectural register number.
-  val rf = withClock(clk) { Reg(Vec(registerCount, UInt(dataWidth.W))) }
+  // 普通 Reg 不附加全阵列复位；只在下面显式更新 x0 或有效写入的目的寄存器。
+  val Registers = withClock(clk) {
+    Reg(Vec(registerCount, UInt(dataWidth.W))).suggestName("rf")
+  }
   val WriteEnable = Wire(Bool())
   WriteEnable := io.WE3 && (io.A3 =/= 0.U)
 
   withClock(clk) {
     when(reset) {
-      rf(0) := 0.U(dataWidth.W)
+      Registers(0) := 0.U(dataWidth.W)
     }.elsewhen(WriteEnable) {
-      rf(io.A3) := io.WD3
+      Registers(io.A3) := io.WD3
     }
   }
 
-  io.RD1 := rf(io.A1)
-  io.RD2 := rf(io.A2)
+  io.RD1 := Registers(io.A1)
+  io.RD2 := Registers(io.A2)
 }

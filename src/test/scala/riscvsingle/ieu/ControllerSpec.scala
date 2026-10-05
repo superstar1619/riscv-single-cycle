@@ -42,10 +42,17 @@ private class ControllerALUHarness extends Module {
 
 class ControllerSpec extends AnyFlatSpec with ChiselScalatestTester {
   // Independent behavioral table; this reference never packs control bits.
-  private case class MainControls(regWrite: Boolean = false, immSrc: Int = 0,
-      aluSrc: Int = 0, aluOp: Boolean = false, aluResultSrc: Boolean = false,
-      memRW: Int = 0, resultSrc: Boolean = false, branch: Boolean = false,
-      jump: Boolean = false)
+  private case class MainControls(
+    regWrite: Boolean = false,
+    immSrc: Int = 0,
+    aluSrc: Int = 0,
+    aluOp: Boolean = false,
+    aluResultSrc: Boolean = false,
+    memRW: Int = 0,
+    resultSrc: Boolean = false,
+    branch: Boolean = false,
+    jump: Boolean = false
+  )
   private val mainTable = Map(
     0x33 -> MainControls(regWrite = true, aluOp = true),
     0x13 -> MainControls(regWrite = true, aluSrc = 1, aluOp = true),
@@ -74,8 +81,14 @@ class ControllerSpec extends AnyFlatSpec with ChiselScalatestTester {
     case _ => false
   }
 
-  private def check(dut: ControllerHarness, op: Int, f3: Int, f7: Int,
-      flags: Int, expected: MainControls): Unit = {
+  private def check(
+    dut: ControllerHarness,
+    op: Int,
+    f3: Int,
+    f7: Int,
+    flags: Int,
+    expected: MainControls
+  ): Unit = {
     val eq = (flags & 1) != 0
     val lt = (flags & 2) != 0
     val ltu = (flags & 4) != 0
@@ -110,7 +123,8 @@ class ControllerSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   behavior of "Controller"
 
-  it should "match independent legality and controls for all opcode funct3 funct7 combinations" in {
+  it should ("match independent legality and controls for all opcode funct3 funct7 " +
+    "combinations") in {
     test(new ControllerHarness) { dut =>
       for (op <- 0 until 128; f3 <- 0 until 8; f7 <- 0 until 128) {
         val expected = if (legal(op, f3, f7)) mainTable(op) else MainControls()
@@ -119,7 +133,8 @@ class ControllerSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "select all six branch conditions for every function field and all eight flag combinations" in {
+  it should ("select all six branch conditions for every function field and all eight " +
+    "flag combinations") in {
     test(new ControllerHarness) { dut =>
       for (f3 <- 0 until 8; f7 <- 0 until 128; flags <- 0 until 8) {
         val expected = if (legal(0x63, f3, f7)) mainTable(0x63) else MainControls()
@@ -128,7 +143,8 @@ class ControllerSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "distinguish immediate data from reserved shift and unsupported extension encodings" in {
+  it should ("distinguish immediate data from reserved shift and unsupported extension " +
+    "encodings") in {
     test(new ControllerHarness) { dut =>
       // Each fixture states legality explicitly, independent of the sweep decoder.
       val vectors = Seq(
@@ -193,7 +209,8 @@ class ControllerSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "elaborate exactly sixteen combinational ports with full function and comparison inputs" in {
+  it should ("elaborate exactly sixteen combinational ports with full function and " +
+    "comparison inputs") in {
     val targetDir = Files.createTempDirectory("controller-interface-")
     val verilog = (new ChiselStage).emitVerilog(new Controller,
       Array("--target-dir", targetDir.toString))

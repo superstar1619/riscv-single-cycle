@@ -55,8 +55,12 @@ class RegFileSpec extends AnyFlatSpec with ChiselScalatestTester {
     dut.io.RD2.expect(model(a2).U)
   }
 
-  private def randomized(dut: RegFileHarness, dataWidth: Int, registerCount: Int,
-      cycles: Int): Unit = {
+  private def randomized(
+    dut: RegFileHarness,
+    dataWidth: Int,
+    registerCount: Int,
+    cycles: Int
+  ): Unit = {
     val model = Array.fill(registerCount)(BigInt(0))
     initialize(dut, model)
     val random = new Random(0x215F1L + dataWidth * 100 + registerCount)
@@ -87,7 +91,8 @@ class RegFileSpec extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "RegFile"
 
   for (dataWidth <- Seq(32, 64)) {
-    it should s"keep x0 zero after reset and read every register pair combinationally at $dataWidth bits" in {
+    it should (s"keep x0 zero after reset and read every register pair combinationally " +
+      s"at $dataWidth bits") in {
       test(new RegFileHarness(dataWidth, 32)) { dut =>
         idle(dut)
         dut.reset.poke(true.B)
@@ -116,7 +121,8 @@ class RegFileSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
 
-    it should s"sample writes at rising edges and reset only x0 with priority over writes at $dataWidth bits" in {
+    it should (s"sample writes at rising edges and reset only x0 with priority over " +
+      s"writes at $dataWidth bits") in {
       test(new RegFileHarness(dataWidth, 32)) { dut =>
         val model = Array.fill(32)(BigInt(0))
         initialize(dut, model)
@@ -167,7 +173,8 @@ class RegFileSpec extends AnyFlatSpec with ChiselScalatestTester {
       test(new RegFileHarness(dataWidth, 32)) { dut => randomized(dut, dataWidth, 32, 300) }
     }
 
-    it should s"preserve every nonzero register across reset pulses and suppress every reset-time write at $dataWidth bits" in {
+    it should (s"preserve every nonzero register across reset pulses and suppress " +
+      s"every reset-time write at $dataWidth bits") in {
       test(new RegFileHarness(dataWidth, 32)) { dut =>
         val mask = (BigInt(1) << dataWidth) - 1
         val highBit = BigInt(1) << (dataWidth - 1)
@@ -219,7 +226,8 @@ class RegFileSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "elaborate an N-entry register bank with direct indices and an explicit synchronous reset" in {
+  it should ("elaborate an N-entry register bank with direct indices and an explicit " +
+    "synchronous reset") in {
     for ((dataWidth, registerCount) <- Seq((32, 32), (64, 32), (8, 16), (1, 2))) {
       val targetDir = Files.createTempDirectory("regfile-interface-")
       val verilog = (new ChiselStage).emitVerilog(new RegFile(dataWidth, registerCount),
@@ -230,7 +238,8 @@ class RegFileSpec extends AnyFlatSpec with ChiselScalatestTester {
         port.group(3) -> (port.group(1), width)
       }.toMap
       val addressWidth = chisel3.util.log2Ceil(registerCount)
-      assert(ports == Map("clk" -> ("input", 1), "reset" -> ("input", 1), "io_WE3" -> ("input", 1),
+      assert(ports == Map("clk" -> ("input", 1), "reset" -> ("input", 1),
+        "io_WE3" -> ("input", 1),
         "io_A1" -> ("input", addressWidth), "io_A2" -> ("input", addressWidth),
         "io_A3" -> ("input", addressWidth), "io_WD3" -> ("input", dataWidth),
         "io_RD1" -> ("output", dataWidth), "io_RD2" -> ("output", dataWidth)))
